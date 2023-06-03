@@ -39,17 +39,23 @@ public class YourService extends KiboRpcService {
         //      mission start         //
         /*//////////////////////////////
         api.startMission();
+        Log.i(TAG, "start!!!!!!!!!!!!!!!!");
+        MoveToWaypoint(waypoints_config.wp1); // initial point
 
-        //move 1 to 6
         //Long ActiveTime = Time.get(0); //現在のフェーズの残り時間(ミリ秒)
         //Long MissionTime = Time.get(1); //ミッション残り時間(ミリ秒)
         //List<Long> Time = api.getTimeRemaining();
 
         List<Integer> ActiveTargets = api.getActiveTargets(); //ターゲットの取得
+        Log.i(TAG, "目標1");
+        Log.i(TAG, "Let's go " + ActiveTargets.get(0));
+        Log.i(TAG, "目標2");
+        Log.i(TAG, "Let's go " + ActiveTargets.get(1));
 
-        while (api.getTimeRemaining().get(1) <(5-4.0)*60*1000){
+        while (api.getTimeRemaining().get(1) >(5-4.0)*60*1000){
             GoTarget(api.getActiveTargets());
         }
+        Log.i(TAG,"go to goal");
         MoveToWaypoint(waypoints_config.goal_point);
         api.notifyGoingToGoal();
         api.reportMissionCompletion(report);
@@ -187,29 +193,48 @@ public class YourService extends KiboRpcService {
 
         while(i < index){
             Log.i(TAG, "Let's go " + ActiveTargets.get(i).toString());
-            switch (ActiveTargets.get(i)){
-                case 1:
-                    MoveToWaypoint(waypoints_config.point1);
-                    break;
-                case 2:
-                    MoveToWaypoint(waypoints_config.point2);
-                    break;
-                case 3:
-                    MoveToWaypoint(waypoints_config.point3);
-                    break;
-                case 4:
-                    MoveToWaypoint(waypoints_config.point4);
-                    break;
-                case 5:
-                    MoveToWaypoint(waypoints_config.point5);
-                    break;
-                case 6:
-                    MoveToWaypoint(waypoints_config.point6);
-                    break;
-            }
+            Waypoint2Number(ActiveTargets.get(i));
             api.laserControl(true);
             api.takeTargetSnapshot(ActiveTargets.get(i));
             ++i;
+        }
+    }
+
+    private void Waypoint2Number(int n){
+        switch (n){
+            case 1:
+                MoveToWaypoint(waypoints_config.point1);
+                break;
+            case 2:
+                MoveToWaypoint(waypoints_config.point2);
+                break;
+            case 3:
+                MoveToWaypoint(waypoints_config.point3);
+                break;
+            case 4:
+                MoveToWaypoint(waypoints_config.point4);
+                break;
+            case 5:
+                MoveToWaypoint(waypoints_config.point5);
+                break;
+            case 6:
+                MoveToWaypoint(waypoints_config.point6);
+                break;
+            case 7:
+                MoveToWaypoint(waypoints_config.point7);
+                break;
+            case 8:
+                MoveToWaypoint(waypoints_config.goal_point);
+                break;
+            case 9:
+                MoveToWaypoint(waypoints_config.wp1);
+                break;
+            case 10:
+                MoveToWaypoint(waypoints_config.wp2);
+                break;
+            case 11:
+                MoveToWaypoint(waypoints_config.wp3);
+                break;
         }
     }
 }
