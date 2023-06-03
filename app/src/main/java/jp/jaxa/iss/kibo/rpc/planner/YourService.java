@@ -29,8 +29,10 @@ import java.util.List;
  */
 
 public class YourService extends KiboRpcService {
+    private static final double INF = Double.POSITIVE_INFINITY; // 非接続を示すための無限大の値
     private final String TAG = this.getClass().getSimpleName();
     static String report = "STAY_AT_JEM"; //　ここにQRに対応するメッセージを書き込む
+    static int Now_place; //現在位置
 
     @Override
     protected void runPlan1(){
@@ -41,33 +43,20 @@ public class YourService extends KiboRpcService {
         api.startMission();
         Log.i(TAG, "start!!!!!!!!!!!!!!!!");
         MoveToWaypoint(waypoints_config.wp1); // initial point
+        Now_place = 9;
 
         //Long ActiveTime = Time.get(0); //現在のフェーズの残り時間(ミリ秒)
         //Long MissionTime = Time.get(1); //ミッション残り時間(ミリ秒)
         //List<Long> Time = api.getTimeRemaining();
 
-        List<Integer> ActiveTargets = api.getActiveTargets(); //ターゲットの取得
-        Log.i(TAG, "目標1");
-        Log.i(TAG, "Let's go " + ActiveTargets.get(0));
-        Log.i(TAG, "目標2");
-        Log.i(TAG, "Let's go " + ActiveTargets.get(1));
-
         while (api.getTimeRemaining().get(1) >(5-4.0)*60*1000){
-            GoTarget(api.getActiveTargets());
+            GoTarget(api.getActiveTargets(),Now_place);
         }
         Log.i(TAG,"go to goal");
         MoveToWaypoint(waypoints_config.goal_point);
         api.notifyGoingToGoal();
         api.reportMissionCompletion(report);
 
-        /*
-        //時間調整
-        while (Time.get(1) > (5-3.5)*60*1000){
-            Time = api.getTimeRemaining();
-            Log.i(TAG, "残り時間" + Time.get(1).toString());
-
-        }
-        */
 
     }
 
@@ -146,7 +135,6 @@ public class YourService extends KiboRpcService {
         }
     }
 
-
     //右下のマーカを見つける
     private int findBottomRight(List<Mat> corners){
         Log.i(TAG,"start findBottomRight");
@@ -185,7 +173,7 @@ public class YourService extends KiboRpcService {
         Log.i(TAG, "[LoggingKinematics]: 加速度" + kinematics.getLinearAcceleration().toString());  // 加速度
     }
 
-    private  void GoTarget(List<Integer> ActiveTargets){
+    private  void GoTarget(List<Integer> ActiveTargets, int Now_place){
         int index = ActiveTargets.size();
         int i = 0;
         //現状は番号の若い順に行く仕様になっている
@@ -193,14 +181,95 @@ public class YourService extends KiboRpcService {
 
         while(i < index){
             Log.i(TAG, "Let's go " + ActiveTargets.get(i).toString());
-            Waypoint2Number(ActiveTargets.get(i));
+            List<Integer> route = getShortestPath(Now_place,ActiveTargets.get(i));
+            for(int n = 1; n<route.size();n++){
+                Log.i(TAG, "Let's go to node " +route.get(n).toString());
+                Waypoint2Number(route.get(n));
+            }
             api.laserControl(true);
             api.takeTargetSnapshot(ActiveTargets.get(i));
             ++i;
         }
     }
 
+    public static double[] dijkstra(double[][] A, int start) {
+        int n = A.length; // 頂点数
+        double[] distances = new double[n]; // 始点から各頂点までの最短距離
+        boolean[] visited = new boolean[n]; // 頂点の訪問状態
+
+        // distances配列を初期化し、始点以外の頂点を無限大に設定
+        Arrays.fill(distances, INF);
+        distances[start] = 0.0;
+
+        for (int i = 0; i < n; i++) {
+            // 未訪問の頂点のうち、距離が最小の頂点を見つける
+            double minDist = INF;
+            int minIndex = -1;
+
+            for (int j = 0; j < n; j++) {
+                if (!visited[j] && distances[j] < minDist) {
+                    minDist = distances[j];
+                    minIndex = j;
+                }
+            }
+
+            // 見つからなかった場合、終了
+            if (minIndex == -1) {
+                break;
+            }
+
+            // 見つかった頂点を訪問済みとする
+            visited[minIndex] = true;
+
+            // 隣接する頂点の距離を更新する
+            for (int j = 0; j < n; j++) {
+                if (!visited[j] && A[minIndex][j] != INF) {
+                    double distance = distances[minIndex] + A[minIndex][j];
+                    if (distance < distances[j]) {
+                        distances[j] = distance;
+                    }
+                }
+            }
+        }
+
+        return distances;
+    }
+
+    public static List<Integer> getShortestPath(int start, int end) {
+        double[][] A = adjacency_matrix.graph;
+        double[] distances = dijkstra(A, start);
+        List<Integer> path = new ArrayList<>();
+
+        if (distances[end] == INF) {
+            return path; // 到達不可能な場合、空のリストを返す
+        }
+
+        // 終点から始点までの最短経路を復元
+        int current = end;
+        path.add(current);
+        while (current != start) {
+            for (int prev = 0; prev < A.length; prev++) {
+                if (A[prev][current] != INF && distances[current] == distances[prev] + A[prev][current]) {
+                    current = prev;
+                    path.add(0, current);
+                    break;
+                }
+            }
+        }
+
+        return path;
+    }
+
+    private String[] StringArray2DoubleArray(double[] array){
+        String[] stringArray = new String[array.length];
+        for (int i = 0; i < array.length; i++) {
+            stringArray[i] = Double.toString(array[i]);
+        }
+        return stringArray;
+    }
+
     private void Waypoint2Number(int n){
+        Now_place = n; //現在位置の変更
         switch (n){
             case 1:
                 MoveToWaypoint(waypoints_config.point1);
