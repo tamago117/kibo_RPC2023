@@ -142,7 +142,7 @@ public class YourService extends KiboRpcService {
             case "INTBALL":
                 QRcode_content = "LOOKING_FORWARD_TO_SEE_YOU";
                 break;
-            case "BLACK":
+            case "BLANK":
                 QRcode_content = "NO_PROBLEM";
                 break;
             default:
