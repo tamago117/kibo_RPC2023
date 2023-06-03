@@ -112,9 +112,11 @@ public class YourService extends KiboRpcService {
             Log.i(TAG,"detect_success is " + detect_success.toString());
 
             QRcode_content = qrc_detector.detectAndDecode(mini_image, points, straight_qrcode);
-            Mat straight_qrcode_gray = new Mat();
-            straight_qrcode.convertTo(straight_qrcode_gray, CvType.CV_8UC1);
-            api.saveMatImage(straight_qrcode_gray,"QR_binary.png");
+            if(QRcode_content != null){
+                Mat straight_qrcode_gray = new Mat();
+                straight_qrcode.convertTo(straight_qrcode_gray, CvType.CV_8UC1);
+                api.saveMatImage(straight_qrcode_gray,"QR_binary.png");
+            }
             Log.i(TAG,"QRCode_content is " + QRcode_content);
 
         } catch(Exception e){
