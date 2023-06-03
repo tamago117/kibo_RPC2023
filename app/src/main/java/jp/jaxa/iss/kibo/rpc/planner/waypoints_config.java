@@ -1,4 +1,4 @@
-package jp.jaxa.iss.kibo.rpc.sampleapk;
+package jp.jaxa.iss.kibo.rpc.planner;
 
 
 
@@ -56,7 +56,4 @@ public interface waypoints_config {
         Waypoint wp3 = new Waypoint(10.571, -7.463, 5.326,
                 0, 0, -0.707, 0.707,
                 0, 0, 0.0);    // way point
-    }
-    Footer
-© 2023 GitHub, Inc.
 }

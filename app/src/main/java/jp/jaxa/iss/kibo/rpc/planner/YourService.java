@@ -1,4 +1,4 @@
-package jp.jaxa.iss.kibo.rpc.sampleapk;
+package jp.jaxa.iss.kibo.rpc.planner;
 
 import android.util.Log;
 import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
