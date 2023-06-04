@@ -43,8 +43,20 @@ public class YourService extends KiboRpcService {
         api.startMission();
         Log.i(TAG, "start!!!!!!!!!!!!!!!!");
         MoveToWaypoint(waypoints_config.wp1); // initial point
+        MoveToWaypoint(waypoints_config.wp2); // QR point
+
+        //nupeさんここ値の変更はまかせた
         Now_place = 9;
 
+        ///////////////ここでQRを読み込む///////////////////
+
+
+        ////////////////////////////////////////////////////
+
+
+
+
+        //////////////ここから探索//////////////////////////
         //Long ActiveTime = Time.get(0); //現在のフェーズの残り時間(ミリ秒)
         //Long MissionTime = Time.get(1); //ミッション残り時間(ミリ秒)
         //List<Long> Time = api.getTimeRemaining();
@@ -54,6 +66,7 @@ public class YourService extends KiboRpcService {
         }
         Log.i(TAG,"go to goal");
         MoveToWaypoint(waypoints_config.goal_point);
+
         api.notifyGoingToGoal();
         api.reportMissionCompletion(report);
 
@@ -290,19 +303,13 @@ public class YourService extends KiboRpcService {
                 MoveToWaypoint(waypoints_config.point6);
                 break;
             case 7:
-                MoveToWaypoint(waypoints_config.point7);
-                break;
-            case 8:
                 MoveToWaypoint(waypoints_config.goal_point);
                 break;
-            case 9:
+            case 8:
                 MoveToWaypoint(waypoints_config.wp1);
                 break;
-            case 10:
+            case 9:
                 MoveToWaypoint(waypoints_config.wp2);
-                break;
-            case 11:
-                MoveToWaypoint(waypoints_config.wp3);
                 break;
         }
     }

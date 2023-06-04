@@ -47,9 +47,12 @@ public interface waypoints_config {
         Waypoint wp1 = new Waypoint(10.508, -9.769, 4.567,
                 0, 0, 0, 1,
                 0, 0, 0);    // way point
+
+        //QR
         // wp2 -> (point1, point2, point3, point4, point5, point6, wp1, goal)
-        Waypoint wp2 = new Waypoint(11.381, -9.036, 4.894,
-                0.36710763, 0.36710763, -0.604344308, 0.604344308,
-                0, 0, 0.0);    // way point + QR
+        Waypoint wp2 =new Waypoint(11.381, -8.882, 4.894,
+                0, 0.707, 0, 0.707,
+                0, 0, 0);    // way point + QR
+
 
 }
