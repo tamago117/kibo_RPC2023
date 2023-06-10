@@ -318,6 +318,9 @@ public class YourService extends KiboRpcService {
             case 9:
                 MoveToWaypoint(waypoints_config.wp2);
                 break;
+            case 10:
+                MoveToWaypoint(waypoints_config.wp3);
+                break;
         }
     }
 
@@ -328,7 +331,7 @@ public class YourService extends KiboRpcService {
         String QRcode_content = "";
         try{
             api.saveMatImage(image,"QR.png");
-            Mat mini_image = new Mat(image, new Rect(700, 360, 240, 240)); // ここの値は切り取る領域
+            Mat mini_image = new Mat(image, new Rect(400, 400, 240, 240)); // ここの値は切り取る領域
             api.saveMatImage(mini_image,"QR_mini.png");
 
             MatOfPoint2f points = new MatOfPoint2f();

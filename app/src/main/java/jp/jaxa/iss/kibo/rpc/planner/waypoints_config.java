@@ -11,27 +11,27 @@ public interface waypoints_config {
         //start -> (wp1)
         //goal -> (point4, wp3)
 
-        // point1 -> (point2, point5, point6, wp2)
-        Waypoint point1 = new Waypoint(11.318, -9.053, 5.251,
+        // point1 -> ( point5, point6, wp2, wp3)
+        Waypoint point1 = new Waypoint(11.318, -9.8, 5.251,
                 0.707, -0.707, 0, 0,
                 0, 0, 0);
-        // point2 -> (point1, point3, point4, point5, point6, wp1, wp2, goal)
-        Waypoint point2 = new Waypoint(10.625, -9.144, 4.924,
+        // point2 -> (wp1, wp2)
+        Waypoint point2 = new Waypoint(10.625, -9.144, 4.6,
                 0, 0.707, 0, 0.707,
                 0, 0, 0);    // Point
-        // point3 -> (point2, point4, point5, point6, wp2, goal)
-        Waypoint point3 = new Waypoint(10.722, -7.769, 4.9,
+        // point3 -> (wp2, wp3)
+        Waypoint point3 = new Waypoint(10.722, -7.769, 4.6,
                 0, 0.707, 0, 0.707,
                 0, 0, 0);    // Point
-        // point4 -> (point2, point3, point5, point6, wp2, goal)
-        Waypoint point4 = new Waypoint(11.067, -6.616, 4.979,
-                0, -0.102377467, 0.994745612, 0, //Quaternion(0,0.994745612,-0.102377467,0)
+        // point4 -> (point5, wp2, wp3, goal)
+        Waypoint point4 = new Waypoint(10.6, -6.616, 5.205,
+                0, 0, 1, 0,
                 0, 0, 0);    // Point
-        // point5 -> (point1, point2, point3, point4, point6, wp2, goal)
-        Waypoint point5 = new Waypoint(10.992, -8.084, 4.906,
+        // point5 -> (point1, point4, wp2, wp3)
+        Waypoint point5 = new Waypoint(10.992, -8.084, 5.34,
                 0, -0.707, 0, 0.707,
                 0, 0, 0);    // Point
-        // point6 -> (point1, point2, point3, point4, point5, wp1, wp2, goal)
+        // point6 -> (point1, wp1, wp2)
         Waypoint point6 = new Waypoint(11.21, -9.045, 4.941,
                 0, 0, 0, 1,
                 0, 0, 0);    // Point
@@ -40,19 +40,18 @@ public interface waypoints_config {
                 0, 0, -0.707, 0.707,
                 0, 0, 0);    // Point
 
-
-        //start -> wp1 -> wp2(QR code読み取り) -> 探索開始
-
-        // wp1 -> (point2, point6, wp2, start)
+        // wp1 -> (point2, point6, wp1, wp3, start)
         Waypoint wp1 = new Waypoint(10.508, -9.769, 4.567,
                 0, 0, 0, 1,
                 0, 0, 0);    // way point
-
-        //QR
-        // wp2 -> (point1, point2, point3, point4, point5, point6, wp1, goal)
-        Waypoint wp2 =new Waypoint(11.381, -8.882, 4.894,
-                0, 0.707, 0, 0.707,
-                0, 0, 0);    // way point + QR
+        // wp2 -> (point1, point2, point3, point4, point5, point6, wp1, wp3)
+        Waypoint wp2 = new Waypoint(10.742, -8.708, 5.251,
+                -0.5, 0.5, 0.5, 0.5,
+                0, 0, 0.0);    // way point
+        //wp3 -> (point3, point4, point5, wp2, wp3, goal)
+        Waypoint wp3 = new Waypoint(10.571, -7.463, 5.326,
+                0, 0, -0.707, 0.707,
+                0, 0, 0.0);    // way point
 
 
 }
