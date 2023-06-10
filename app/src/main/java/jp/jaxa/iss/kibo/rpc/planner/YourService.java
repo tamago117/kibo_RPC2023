@@ -12,12 +12,17 @@ import gov.nasa.arc.astrobee.types.Quaternion;
 
 import org.opencv.aruco.Aruco;
 import org.opencv.aruco.Dictionary;
+
 import org.opencv.core.Mat;
-
 import org.opencv.core.MatOfDouble;
-
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.CvType;
+import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+
 import org.opencv.imgproc.Imgproc;
+
+import org.opencv.objdetect.QRCodeDetector;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -43,8 +48,22 @@ public class YourService extends KiboRpcService {
         api.startMission();
         Log.i(TAG, "start!!!!!!!!!!!!!!!!");
         MoveToWaypoint(waypoints_config.wp1); // initial point
+        MoveToWaypoint(waypoints_config.wp2); // QR point
+
+        //nupeさんここ値の変更はまかせた
         Now_place = 9;
 
+        ///////////////ここでQRを読み込む///////////////////
+        Mat image = new Mat();
+        image = api.getMatNavCam();
+        api.saveMatImage(image,"wp2.png");
+        String report = read_QRcode(image);
+        ////////////////////////////////////////////////////
+
+
+
+
+        //////////////ここから探索//////////////////////////
         //Long ActiveTime = Time.get(0); //現在のフェーズの残り時間(ミリ秒)
         //Long MissionTime = Time.get(1); //ミッション残り時間(ミリ秒)
         //List<Long> Time = api.getTimeRemaining();
@@ -54,6 +73,7 @@ public class YourService extends KiboRpcService {
         }
         Log.i(TAG,"go to goal");
         MoveToWaypoint(waypoints_config.goal_point);
+
         api.notifyGoingToGoal();
         api.reportMissionCompletion(report);
 
@@ -290,20 +310,70 @@ public class YourService extends KiboRpcService {
                 MoveToWaypoint(waypoints_config.point6);
                 break;
             case 7:
-                MoveToWaypoint(waypoints_config.point7);
-                break;
-            case 8:
                 MoveToWaypoint(waypoints_config.goal_point);
                 break;
-            case 9:
+            case 8:
                 MoveToWaypoint(waypoints_config.wp1);
                 break;
-            case 10:
+            case 9:
                 MoveToWaypoint(waypoints_config.wp2);
                 break;
-            case 11:
-                MoveToWaypoint(waypoints_config.wp3);
+        }
+    }
+
+    /**
+     * FUNCTIONs ABOUT QRCODE
+     */
+    private String read_QRcode(Mat image){
+        String QRcode_content = "";
+        try{
+            api.saveMatImage(image,"QR.png");
+            Mat mini_image = new Mat(image, new Rect(700, 360, 240, 240)); // ここの値は切り取る領域
+            api.saveMatImage(mini_image,"QR_mini.png");
+
+            MatOfPoint2f points = new MatOfPoint2f();
+            Mat straight_qrcode = new Mat();
+            QRCodeDetector qrc_detector = new QRCodeDetector();
+            Boolean detect_success = qrc_detector.detect(mini_image, points);
+            Log.i(TAG,"detect_success is " + detect_success.toString());
+
+            QRcode_content = qrc_detector.detectAndDecode(mini_image, points, straight_qrcode);
+            Log.i(TAG,"QRCode_content is " + QRcode_content);
+            if(QRcode_content != null){
+                Mat straight_qrcode_gray = new Mat();
+                straight_qrcode.convertTo(straight_qrcode_gray, CvType.CV_8UC1);
+                api.saveMatImage(straight_qrcode_gray,"QR_binary.png");
+            }
+
+        } catch(Exception e){
+            ;
+        }
+        /**
+         * QRCode_CONTENT to REPORT_MESSEGE
+         */
+        switch(QRcode_content){
+            case "JEM":
+                QRcode_content = "STAY_AT_JEM";
+                break;
+            case "COLUMBUS":
+                QRcode_content = "GO_TO_COLUMBUS";
+                break;
+            case "RACK1":
+                QRcode_content = "CHECK_RACK_1";
+                break;
+            case "ASTROBEE":
+                QRcode_content = "I_AM_HERE";
+                break;
+            case "INTBALL":
+                QRcode_content = "LOOKING_FORWARD_TO_SEE_YOU";
+                break;
+            case "BLANK":
+                QRcode_content = "NO_PROBLEM";
+                break;
+            default:
+                QRcode_content = "";
                 break;
         }
+        return QRcode_content;
     }
 }
