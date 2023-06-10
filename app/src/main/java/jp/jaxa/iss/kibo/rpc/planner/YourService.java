@@ -36,7 +36,6 @@ import java.util.List;
 public class YourService extends KiboRpcService {
     private static final double INF = Double.POSITIVE_INFINITY; // 非接続を示すための無限大の値
     private final String TAG = this.getClass().getSimpleName();
-    static String report = "STAY_AT_JEM"; //　ここにQRに対応するメッセージを書き込む
 
     @Override
     protected void runPlan1(){
@@ -51,12 +50,11 @@ public class YourService extends KiboRpcService {
         MoveToWaypoint(waypoints_config.wp2); // QR point
 
         //nupeさんここ値の変更はまかせた
-        Now_place = 9;
+        Global.Nowplace = 8;
 
 
         ///////////////ここでQRを読み込む///////////////////
-        Mat image = new Mat();
-        image = api.getMatNavCam();
+        Mat image = api.getMatNavCam();
         api.saveMatImage(image,"wp2.png");
         String report = read_QRcode(image);
         ////////////////////////////////////////////////////
@@ -205,7 +203,6 @@ public class YourService extends KiboRpcService {
         if (index == 2) {
             distance[0] = minimum_distance(Global.Nowplace,ActiveTargets.get(0)-1);
             distance[1] = minimum_distance(Global.Nowplace,ActiveTargets.get(1)-1);
-
             if(distance[0] > distance[1]){
                 //順番を交換
                 int temp = ActiveTargets.get(0);
@@ -320,40 +317,43 @@ public class YourService extends KiboRpcService {
             case 8:
                 MoveToWaypoint(waypoints_config.wp2);
                 break;
+            case 9:
+                MoveToWaypoint(waypoints_config.wp3);
+                break;
         }
     }
 
     /**
      * FUNCTIONs ABOUT QRCODE
      */
-    private String read_QRcode(Mat image){
+    private String read_QRcode(Mat image) {
         String QRcode_content = "";
-        try{
-            api.saveMatImage(image,"QR.png");
+        try {
+            api.saveMatImage(image, "QR.png");
             Mat mini_image = new Mat(image, new Rect(700, 360, 240, 240)); // ここの値は切り取る領域
-            api.saveMatImage(mini_image,"QR_mini.png");
+            api.saveMatImage(mini_image, "QR_mini.png");
 
             MatOfPoint2f points = new MatOfPoint2f();
             Mat straight_qrcode = new Mat();
             QRCodeDetector qrc_detector = new QRCodeDetector();
             Boolean detect_success = qrc_detector.detect(mini_image, points);
-            Log.i(TAG,"detect_success is " + detect_success.toString());
+            Log.i(TAG, "detect_success is " + detect_success.toString());
 
             QRcode_content = qrc_detector.detectAndDecode(mini_image, points, straight_qrcode);
-            Log.i(TAG,"QRCode_content is " + QRcode_content);
-            if(QRcode_content != null){
+            Log.i(TAG, "QRCode_content is " + QRcode_content);
+            if (QRcode_content != null) {
                 Mat straight_qrcode_gray = new Mat();
                 straight_qrcode.convertTo(straight_qrcode_gray, CvType.CV_8UC1);
-                api.saveMatImage(straight_qrcode_gray,"QR_binary.png");
+                api.saveMatImage(straight_qrcode_gray, "QR_binary.png");
             }
 
-        } catch(Exception e){
+        } catch (Exception e) {
             ;
         }
         /**
          * QRCode_CONTENT to REPORT_MESSEGE
          */
-        switch(QRcode_content){
+        switch (QRcode_content) {
             case "JEM":
                 QRcode_content = "STAY_AT_JEM";
                 break;
@@ -377,6 +377,7 @@ public class YourService extends KiboRpcService {
                 break;
         }
         return QRcode_content;
+    }
 
     private double minimum_distance(int start,int end){
         List<Integer> route = dijkstra(start,end);
