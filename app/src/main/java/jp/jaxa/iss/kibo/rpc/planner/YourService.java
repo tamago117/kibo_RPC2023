@@ -279,8 +279,8 @@ public class YourService extends KiboRpcService {
         int current = end;
         path.add(current);
         while (current != start) {
-                path.add(0,current);
                 current = prev[current];
+                path.add(0,current);
             }
         path.add(0,start);
         return path;
