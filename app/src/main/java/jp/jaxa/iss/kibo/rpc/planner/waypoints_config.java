@@ -37,6 +37,9 @@ public interface waypoints_config {
         Waypoint point6 = new Waypoint(11.21, -9.045, 4.941,
                 0, 0, 0, 1,
                 0, 0, 0);    // Point
+        Waypoint point7 = new Waypoint(11.362, -8.615, 4.883,
+                -0.5, 0.5, 0.5, 0.5,
+                0, 0, 0);    // QRcode
 
         Waypoint goal_point = new Waypoint(11.143, -6.7607, 4.9654,
                 0, 0, -0.707, 0.707,

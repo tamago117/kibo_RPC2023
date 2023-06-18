@@ -46,8 +46,9 @@ public class YourService extends KiboRpcService {
         api.startMission();
         Log.i(TAG, "start!!!!!!!!!!!!!!!!");
         MoveToWaypoint(waypoints_config.wp1); // initial point
-
+        MoveToWaypoint(waypoints_config.point7); // QR point
         MoveToWaypoint(waypoints_config.wp2); // QR point
+
 
         //nupeさんここ値の変更はまかせた
         Global.Nowplace = 8;
