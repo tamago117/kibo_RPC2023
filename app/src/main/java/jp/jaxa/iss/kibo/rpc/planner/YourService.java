@@ -47,11 +47,6 @@ public class YourService extends KiboRpcService {
         Log.i(TAG, "start!!!!!!!!!!!!!!!!");
         MoveToWaypoint(waypoints_config.wp1); // initial point
         MoveToWaypoint(waypoints_config.point7); // QR point
-        MoveToWaypoint(waypoints_config.wp2); // QR point
-
-
-        //nupeさんここ値の変更はまかせた
-        Global.Nowplace = 8;
 
 
         ///////////////ここでQRを読み込む///////////////////
@@ -60,7 +55,8 @@ public class YourService extends KiboRpcService {
         String report = read_QRcode(image);
         ////////////////////////////////////////////////////
 
-
+        MoveToWaypoint(waypoints_config.wp2); // QR point
+        Global.Nowplace = 8;
 
 
         //////////////ここから探索//////////////////////////
