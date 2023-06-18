@@ -36,8 +36,6 @@ import java.util.List;
 public class YourService extends KiboRpcService {
     private static final double INF = Double.POSITIVE_INFINITY; // 非接続を示すための無限大の値
     private final String TAG = this.getClass().getSimpleName();
-    static String report = "STAY_AT_JEM"; //　ここにQRに対応するメッセージを書き込む
-    static int Now_place; //現在位置
 
     @Override
     protected void runPlan1(){
@@ -48,14 +46,15 @@ public class YourService extends KiboRpcService {
         api.startMission();
         Log.i(TAG, "start!!!!!!!!!!!!!!!!");
         MoveToWaypoint(waypoints_config.wp1); // initial point
+
         MoveToWaypoint(waypoints_config.wp2); // QR point
 
         //nupeさんここ値の変更はまかせた
-        Now_place = 9;
+        Global.Nowplace = 8;
+
 
         ///////////////ここでQRを読み込む///////////////////
-        Mat image = new Mat();
-        image = api.getMatNavCam();
+        Mat image = api.getMatNavCam();
         api.saveMatImage(image,"wp2.png");
         String report = read_QRcode(image);
         ////////////////////////////////////////////////////
@@ -69,7 +68,8 @@ public class YourService extends KiboRpcService {
         //List<Long> Time = api.getTimeRemaining();
 
         while (api.getTimeRemaining().get(1) >(5-4.0)*60*1000){
-            GoTarget(api.getActiveTargets(),Now_place);
+            Log.i(TAG,"runPlan1内での現在位置"+Global.Nowplace);
+            GoTarget(api.getActiveTargets());
         }
         Log.i(TAG,"go to goal");
         MoveToWaypoint(waypoints_config.goal_point);
@@ -193,17 +193,34 @@ public class YourService extends KiboRpcService {
         Log.i(TAG, "[LoggingKinematics]: 加速度" + kinematics.getLinearAcceleration().toString());  // 加速度
     }
 
-    private  void GoTarget(List<Integer> ActiveTargets, int Now_place){
+    private  void GoTarget(List<Integer> ActiveTargets){
         int index = ActiveTargets.size();
         int i = 0;
-        //現状は番号の若い順に行く仕様になっている
-        // ----- 最短距離で移動出来るようにActiveTargetの内容を入れ替える必要ものをここ or 別関数に入れる ------------
+        double [] distance = new double[2];
+
+        Log.i(TAG,"アクティブターゲット"+ActiveTargets.toString());
+        //最短距離となるように目標ターゲットの順番を変更
+        if (index == 2) {
+            distance[0] = minimum_distance(Global.Nowplace,ActiveTargets.get(0)-1);
+            distance[1] = minimum_distance(Global.Nowplace,ActiveTargets.get(1)-1);
+            if(distance[0] > distance[1]){
+                //順番を交換
+                int temp = ActiveTargets.get(0);
+                ActiveTargets.set(0,ActiveTargets.get(1));
+                ActiveTargets.set(1,temp);
+                Log.i(TAG,"アクティブターゲットを交換"+ActiveTargets.toString());
+            }
+        }
+        //
 
         while(i < index){
-            Log.i(TAG, "Let's go " + ActiveTargets.get(i).toString());
-            List<Integer> route = getShortestPath(Now_place,ActiveTargets.get(i));
-            for(int n = 1; n<route.size();n++){
-                Log.i(TAG, "Let's go to node " +route.get(n).toString());
+            Log.i(TAG, "Let's go Target" + ActiveTargets.get(i).toString());
+            Log.i(TAG,"Gotarget内での現在位置"+Global.Nowplace);
+            List<Integer>route = dijkstra(Global.Nowplace,ActiveTargets.get(i)-1); //-1はゼロオリジンへの修正
+            Log.i(TAG,"Route"+route.toString());
+
+            for(int n = 1; n<route.size();n++){ //n = 0はスタート地点なのでスキップ
+                //Log.i(TAG, "Let's go to node " +route.get(n).toString());
                 Waypoint2Number(route.get(n));
             }
             api.laserControl(true);
@@ -212,10 +229,13 @@ public class YourService extends KiboRpcService {
         }
     }
 
-    public static double[] dijkstra(double[][] A, int start) {
+    public static List<Integer> dijkstra(int start, int end) {
+        double [][] A = adjacency_matrix.graph;
         int n = A.length; // 頂点数
         double[] distances = new double[n]; // 始点から各頂点までの最短距離
         boolean[] visited = new boolean[n]; // 頂点の訪問状態
+        int [] prev = new int[n]; //直前の頂点
+        List<Integer> path = new ArrayList<>(); //パスの保存
 
         // distances配列を初期化し、始点以外の頂点を無限大に設定
         Arrays.fill(distances, INF);
@@ -247,76 +267,58 @@ public class YourService extends KiboRpcService {
                     double distance = distances[minIndex] + A[minIndex][j];
                     if (distance < distances[j]) {
                         distances[j] = distance;
+                        prev[j] = minIndex;
                     }
                 }
             }
         }
-
-        return distances;
-    }
-
-    public static List<Integer> getShortestPath(int start, int end) {
-        double[][] A = adjacency_matrix.graph;
-        double[] distances = dijkstra(A, start);
-        List<Integer> path = new ArrayList<>();
-
         if (distances[end] == INF) {
             return path; // 到達不可能な場合、空のリストを返す
         }
-
         // 終点から始点までの最短経路を復元
         int current = end;
         path.add(current);
         while (current != start) {
-            for (int prev = 0; prev < A.length; prev++) {
-                if (A[prev][current] != INF && distances[current] == distances[prev] + A[prev][current]) {
-                    current = prev;
-                    path.add(0, current);
-                    break;
-                }
+                current = prev[current];
+                path.add(0,current);
             }
-        }
-
+        path.add(0,start);
         return path;
     }
-
-    private String[] StringArray2DoubleArray(double[] array){
-        String[] stringArray = new String[array.length];
-        for (int i = 0; i < array.length; i++) {
-            stringArray[i] = Double.toString(array[i]);
-        }
-        return stringArray;
-    }
-
+    // ゼロオリジンで考えたときのウェイポイントの番号
     private void Waypoint2Number(int n){
-        Now_place = n; //現在位置の変更
+        Global.Nowplace = n; //現在位置の変更
+        Log.i(TAG,"Now_place is "+ Global.Nowplace);
         switch (n){
-            case 1:
+            case 0:
                 MoveToWaypoint(waypoints_config.point1);
                 break;
-            case 2:
+            case 1:
                 MoveToWaypoint(waypoints_config.point2);
                 break;
-            case 3:
+            case 2:
                 MoveToWaypoint(waypoints_config.point3);
                 break;
-            case 4:
+            case 3:
                 MoveToWaypoint(waypoints_config.point4);
                 break;
-            case 5:
+            case 4:
                 MoveToWaypoint(waypoints_config.point5);
                 break;
-            case 6:
+            case 5:
                 MoveToWaypoint(waypoints_config.point6);
                 break;
-            case 7:
+            case 6:
                 MoveToWaypoint(waypoints_config.goal_point);
                 break;
-            case 8:
+            case 7:
                 MoveToWaypoint(waypoints_config.wp1);
                 break;
-            case 9:
+            case 8:
                 MoveToWaypoint(waypoints_config.wp2);
+                break;
+            case 9:
+                MoveToWaypoint(waypoints_config.wp3);
                 break;
         }
     }
@@ -324,34 +326,34 @@ public class YourService extends KiboRpcService {
     /**
      * FUNCTIONs ABOUT QRCODE
      */
-    private String read_QRcode(Mat image){
+    private String read_QRcode(Mat image) {
         String QRcode_content = "";
-        try{
-            api.saveMatImage(image,"QR.png");
+        try {
+            api.saveMatImage(image, "QR.png");
             Mat mini_image = new Mat(image, new Rect(700, 360, 240, 240)); // ここの値は切り取る領域
-            api.saveMatImage(mini_image,"QR_mini.png");
+            api.saveMatImage(mini_image, "QR_mini.png");
 
             MatOfPoint2f points = new MatOfPoint2f();
             Mat straight_qrcode = new Mat();
             QRCodeDetector qrc_detector = new QRCodeDetector();
             Boolean detect_success = qrc_detector.detect(mini_image, points);
-            Log.i(TAG,"detect_success is " + detect_success.toString());
+            Log.i(TAG, "detect_success is " + detect_success.toString());
 
             QRcode_content = qrc_detector.detectAndDecode(mini_image, points, straight_qrcode);
-            Log.i(TAG,"QRCode_content is " + QRcode_content);
-            if(QRcode_content != null){
+            Log.i(TAG, "QRCode_content is " + QRcode_content);
+            if (QRcode_content != null) {
                 Mat straight_qrcode_gray = new Mat();
                 straight_qrcode.convertTo(straight_qrcode_gray, CvType.CV_8UC1);
-                api.saveMatImage(straight_qrcode_gray,"QR_binary.png");
+                api.saveMatImage(straight_qrcode_gray, "QR_binary.png");
             }
 
-        } catch(Exception e){
+        } catch (Exception e) {
             ;
         }
         /**
          * QRCode_CONTENT to REPORT_MESSEGE
          */
-        switch(QRcode_content){
+        switch (QRcode_content) {
             case "JEM":
                 QRcode_content = "STAY_AT_JEM";
                 break;
@@ -375,5 +377,15 @@ public class YourService extends KiboRpcService {
                 break;
         }
         return QRcode_content;
+    }
+
+    private double minimum_distance(int start,int end){
+        List<Integer> route = dijkstra(start,end);
+        double distance = 0;
+        for (int n = 0; n < route.size() - 1; n++) {
+            distance = adjacency_matrix.graph[route.get(n)][route.get(n + 1)];
+        }
+        return distance;
+
     }
 }
