@@ -55,5 +55,9 @@ public interface waypoints_config {
                 0, 0, -0.707, 0.707,
                 0, 0, 0.0);    // way point
 
+        Waypoint QR = new Waypoint(11.362, -8.615, 4.883,
+                -0.5, 0.5, 0.5, 0.5,
+                0, 0, 0);    // QRcode
+
 
 }
