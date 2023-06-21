@@ -1,9 +1,9 @@
 package jp.jaxa.iss.kibo.rpc.planner;
 
 public interface adjacency_matrix{
-    // point1 ~ point7 => 0 ~ 6
-    // goal => 7
-    // wp1 ~ wp3 => 8 ~ 10
+    // point1 ~ point6 => 0 ~ 5
+    // goal => 6
+    // wp1 ~ wp3 => 7 ~ 9
     double INF = Double.POSITIVE_INFINITY;
     double[][] graph = {
             {INF,INF,INF,INF,6.74895768959687,5.82327941793780,INF,INF,6.23460115016956,7.45462889252123},

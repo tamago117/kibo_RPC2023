@@ -37,6 +37,7 @@ public class YourService extends KiboRpcService {
     private static final double INF = Double.POSITIVE_INFINITY; // 非接続を示すための無限大の値
     private final String TAG = this.getClass().getSimpleName();
 
+
     @Override
     protected void runPlan1(){
 
@@ -47,19 +48,15 @@ public class YourService extends KiboRpcService {
         Log.i(TAG, "start!!!!!!!!!!!!!!!!");
         MoveToWaypoint(waypoints_config.wp1); // initial point
 
-        MoveToWaypoint(waypoints_config.QR); // QR point
-
-
         ///////////////ここでQRを読み込む///////////////////
-        Mat image = api.getMatNavCam();
-        api.saveMatImage(image,"wp2.png");
-        String report = read_QRcode(image);
+        //MoveToWaypoint(waypoints_config.QR); // QR point
+        //Mat image = api.getMatNavCam();
+        //api.saveMatImage(image,"wp2.png");
+        //String report = read_QRcode(image);
         ////////////////////////////////////////////////////
 
-        MoveToWaypoint(waypoints_config.wp2);
-        Global.Nowplace = 8;
-
-
+        //oveToWaypoint(waypoints_config.wp2);
+        Global.Nowplace = 7;
 
 
         //////////////ここから探索//////////////////////////
@@ -67,16 +64,15 @@ public class YourService extends KiboRpcService {
         //Long MissionTime = Time.get(1); //ミッション残り時間(ミリ秒)
         //List<Long> Time = api.getTimeRemaining();
 
-        while (api.getTimeRemaining().get(1) >(5-4.0)*60*1000){
+        while (true){
             Log.i(TAG,"runPlan1内での現在位置"+Global.Nowplace);
             GoTarget(api.getActiveTargets());
         }
-        Log.i(TAG,"go to goal");
-        MoveToWaypoint(waypoints_config.goal_point);
+        //Log.i(TAG,"go to goal");
+        //MoveToWaypoint(waypoints_config.goal_point);
 
-        api.notifyGoingToGoal();
-        api.reportMissionCompletion(report);
-
+        //api.notifyGoingToGoal();
+        //api.reportMissionCompletion(Global.report);
 
     }
 
@@ -197,13 +193,26 @@ public class YourService extends KiboRpcService {
         int index = ActiveTargets.size();
         int i = 0;
         double [] distance = new double[2];
+        int [] point = new int[2];
 
         Log.i(TAG,"アクティブターゲット"+ActiveTargets.toString());
         //最短距離となるように目標ターゲットの順番を変更
         if (index == 2) {
             distance[0] = minimum_distance(Global.Nowplace,ActiveTargets.get(0)-1);
             distance[1] = minimum_distance(Global.Nowplace,ActiveTargets.get(1)-1);
-            if(distance[0] > distance[1]){
+            point[0] = TargetPoint(ActiveTargets.get(0));
+            point[1] = TargetPoint(ActiveTargets.get(1));
+
+            //残り時間が近くなったら点数の高いところから移動する．
+            if(api.getTimeRemaining().get(1)<Global.RemainingTime + 0.5*60*1000 && point[0] < point[1]){
+                //順番を交換
+                int temp = ActiveTargets.get(0);
+                ActiveTargets.set(0,ActiveTargets.get(1));
+                ActiveTargets.set(1,temp);
+                Log.i(TAG,"アクティブターゲットを交換"+ActiveTargets.toString());
+            }
+            //距離の近いところから行くために配列の順番を変更
+            else if(distance[0] > distance[1]){
                 //順番を交換
                 int temp = ActiveTargets.get(0);
                 ActiveTargets.set(0,ActiveTargets.get(1));
@@ -219,12 +228,19 @@ public class YourService extends KiboRpcService {
             List<Integer>route = dijkstra(Global.Nowplace,ActiveTargets.get(i)-1); //-1はゼロオリジンへの修正
             Log.i(TAG,"Route"+route.toString());
 
+            if(ActiveTargets.get(i)!=3) {
+                Complete_confirme(false);
+            }
+
             for(int n = 1; n<route.size();n++){ //n = 0はスタート地点なのでスキップ
                 //Log.i(TAG, "Let's go to node " +route.get(n).toString());
                 Waypoint2Number(route.get(n));
             }
             api.laserControl(true);
             api.takeTargetSnapshot(ActiveTargets.get(i));
+            if(ActiveTargets.get(i)==3) {
+                Complete_confirme(true);
+            }
             ++i;
         }
     }
@@ -306,7 +322,16 @@ public class YourService extends KiboRpcService {
                 MoveToWaypoint(waypoints_config.point5);
                 break;
             case 5:
+                //このままはダメ，wp6がないと破綻する
                 MoveToWaypoint(waypoints_config.point6);
+                if(Global.QRflag == 0){
+                    MoveToWaypoint(waypoints_config.QR);
+                    Mat image = api.getMatNavCam();
+                    api.saveMatImage(image,"wp2.png");
+                    Global.report = read_QRcode(image);
+                    Global.QRflag = 1;
+                    MoveToWaypoint(waypoints_config.point6);
+                }
                 break;
             case 6:
                 MoveToWaypoint(waypoints_config.goal_point);
@@ -330,7 +355,7 @@ public class YourService extends KiboRpcService {
         String QRcode_content = "";
         try {
             api.saveMatImage(image, "QR.png");
-            Mat mini_image = new Mat(image, new Rect(700, 360, 240, 240)); // ここの値は切り取る領域
+            Mat mini_image = new Mat(image, new Rect(580, 410, 240, 240)); // ここの値は切り取る領域
             api.saveMatImage(mini_image, "QR_mini.png");
 
             MatOfPoint2f points = new MatOfPoint2f();
@@ -388,4 +413,46 @@ public class YourService extends KiboRpcService {
         return distance;
 
     }
+
+    private void Complete_confirme(boolean terminate) {
+        //Long ActiveTime = Time.get(0); //現在のフェーズの残り時間(ミリ秒)
+        //Long MissionTime = Time.get(1); //ミッション残り時間(ミリ秒)
+
+        if(!terminate){
+            if (api.getTimeRemaining().get(1) < Global.RemainingTime) {
+                Log.i(TAG, "go to goal");
+                List<Integer> route = dijkstra(Global.Nowplace, 6);
+                Log.i(TAG, "Route" + route.toString());
+                for (int n = 1; n < route.size(); n++) { //n = 0はスタート地点なのでスキップ
+                    //Log.i(TAG, "Let's go to node " +route.get(n).toString());
+                    Waypoint2Number(route.get(n));
+                }
+                api.notifyGoingToGoal();
+                api.reportMissionCompletion(Global.report);
+            }
+        }else{
+            if(api.getTimeRemaining().get(1)<Global.RemainingTime){
+                api.notifyGoingToGoal();
+                api.reportMissionCompletion(Global.report);
+            }
+        }
+    }
+    private int TargetPoint(int Target){
+        switch (Target){
+            case 1:
+                return 30;
+            case 2:
+                return 20;
+            case 3:
+                return 40;
+            case 4:
+                return 20;
+            case 5:
+                return 30;
+            case 6:
+                return 30;
+        }
+        return 0;
+    }
 }
+
