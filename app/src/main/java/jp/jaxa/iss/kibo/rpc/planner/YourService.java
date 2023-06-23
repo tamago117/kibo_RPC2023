@@ -20,6 +20,7 @@ import org.opencv.core.CvType;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 
+
 import org.opencv.imgproc.Imgproc;
 
 import org.opencv.objdetect.QRCodeDetector;
@@ -234,6 +235,7 @@ public class YourService extends KiboRpcService {
 
             for(int n = 1; n<route.size();n++){ //n = 0はスタート地点なのでスキップ
                 //Log.i(TAG, "Let's go to node " +route.get(n).toString());
+                //ここにフェーズタイムの監視機能を入れる．if文とbreak
                 Waypoint2Number(route.get(n));
             }
             api.laserControl(true);
