@@ -1,8 +1,8 @@
 package jp.jaxa.iss.kibo.rpc.planner;
 
 import android.util.Log;
-import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
 
+import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
 
 import java.util.List;
 import gov.nasa.arc.astrobee.Result;
@@ -13,13 +13,15 @@ import gov.nasa.arc.astrobee.types.Quaternion;
 import org.opencv.aruco.Aruco;
 import org.opencv.aruco.Dictionary;
 
+import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfDouble;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.CvType;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
-
+import org.opencv.core.Size;
 
 import org.opencv.imgproc.Imgproc;
 
@@ -29,7 +31,6 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 /**
  * Class meant to handle commands from the Ground Data System and execute them in Astrobee
  */
@@ -48,17 +49,16 @@ public class YourService extends KiboRpcService {
         api.startMission();
         Log.i(TAG, "start!!!!!!!!!!!!!!!!");
         MoveToWaypoint(waypoints_config.wp1); // initial point
-
-        ///////////////ここでQRを読み込む///////////////////
-        //MoveToWaypoint(waypoints_config.QR); // QR point
-        //Mat image = api.getMatNavCam();
-        //api.saveMatImage(image,"wp2.png");
-        //String report = read_QRcode(image);
-        ////////////////////////////////////////////////////
-
-        //oveToWaypoint(waypoints_config.wp2);
         Global.Nowplace = 7;
-
+        MoveToWaypoint(waypoints_config.wp2); // QR point
+        Global.Nowplace = 8;
+        ///////////////ここでQRを読み込む///////////////////
+        Mat image = new Mat();
+        api.flashlightControlFront(0.0f);
+        image = api.getMatNavCam();
+        api.saveMatImage(image,"wp2.png");
+        Global.report = read_QRcode(image);
+        ////////////////////////////////////////////////////
 
         //////////////ここから探索//////////////////////////
         //Long ActiveTime = Time.get(0); //現在のフェーズの残り時間(ミリ秒)
@@ -324,16 +324,7 @@ public class YourService extends KiboRpcService {
                 MoveToWaypoint(waypoints_config.point5);
                 break;
             case 5:
-                //このままはダメ，wp6がないと破綻する
                 MoveToWaypoint(waypoints_config.point6);
-                if(Global.QRflag == 0){
-                    MoveToWaypoint(waypoints_config.QR);
-                    Mat image = api.getMatNavCam();
-                    api.saveMatImage(image,"wp2.png");
-                    Global.report = read_QRcode(image);
-                    Global.QRflag = 1;
-                    MoveToWaypoint(waypoints_config.point6);
-                }
                 break;
             case 6:
                 MoveToWaypoint(waypoints_config.goal_point);
@@ -353,59 +344,146 @@ public class YourService extends KiboRpcService {
     /**
      * FUNCTIONs ABOUT QRCODE
      */
-    private String read_QRcode(Mat image) {
+
+    /**
+     * FUNCTIONs ABOUT QRCODE
+     */
+    private String read_QRcode(Mat image){
         String QRcode_content = "";
-        try {
-            api.saveMatImage(image, "QR.png");
-            Mat mini_image = new Mat(image, new Rect(580, 410, 240, 240)); // ここの値は切り取る領域
-            api.saveMatImage(mini_image, "QR_mini.png");
+        /*
+            NavCamのカメラ行列と歪み係数の取得
+         */
+        double[][] NavCamIntrinsics = api.getNavCamIntrinsics();
+        Mat cameraMatrix = new Mat(3,3,CvType.CV_32FC1);
+        cameraMatrix.put(0,0,NavCamIntrinsics[0]);
+        Mat distortionCoefficients = new Mat();
+        distortionCoefficients.put(0,0,NavCamIntrinsics[1]);
 
-            MatOfPoint2f points = new MatOfPoint2f();
-            Mat straight_qrcode = new Mat();
-            QRCodeDetector qrc_detector = new QRCodeDetector();
-            Boolean detect_success = qrc_detector.detect(mini_image, points);
-            Log.i(TAG, "detect_success is " + detect_success.toString());
+        try{
+            Log.i(TAG, "OPENCV_VERSION is " + Core.VERSION );
+            /*
+                Rect(int x, int y, int width, int height )
+             */
+            api.saveMatImage(image,"QR.png");
 
-            QRcode_content = qrc_detector.detectAndDecode(mini_image, points, straight_qrcode);
-            Log.i(TAG, "QRCode_content is " + QRcode_content);
-            if (QRcode_content != null) {
-                Mat straight_qrcode_gray = new Mat();
-                straight_qrcode.convertTo(straight_qrcode_gray, CvType.CV_8UC1);
-                api.saveMatImage(straight_qrcode_gray, "QR_binary.png");
+            Mat image_undistorted = new Mat();
+            Imgproc.undistort(image,image_undistorted,cameraMatrix,distortionCoefficients);
+            api.saveMatImage(image_undistorted,"QR_undistorted.png");
+
+            Mat mini_image_undistorted = new Mat(image_undistorted, new Rect(320, 320, 320, 320)); // ここの値は切り取る領域
+//            Mat mini_image_undistorted = new Mat(image_undistorted, new Rect(520, 360, 360, 360)); // 旧Waypoint2
+            api.saveMatImage(mini_image_undistorted,"QR_mini_undistorted.png");
+
+            // Colabで検証したものの再構築
+            Mat im = new Mat();
+            mini_image_undistorted.copyTo(im);
+            Imgproc.Canny(im, im, 30, 70);
+            api.saveMatImage(im,"mini_canny.png");
+            List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+            Mat hierarchy = new Mat();
+            Imgproc.findContours(im, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            Imgproc.drawContours(im, contours, -1, new Scalar(255,255,255), 5);
+            Core.bitwise_not(im,im);
+            api.saveMatImage(im,"mini_canny_draw_bitwise.png");
+
+            Imgproc.findContours(im, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            List<MatOfPoint> contour_list = new ArrayList<MatOfPoint>();
+            for (MatOfPoint contour : contours) {
+                // 輪郭を近似する
+                MatOfPoint2f approxCurve = new MatOfPoint2f();
+                MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
+                double epsilon = 0.05 * Imgproc.arcLength(contour2f, true);
+                Imgproc.approxPolyDP(contour2f, approxCurve, epsilon, true);
+
+                // 近似された輪郭の頂点数を取得する
+                int vertices = approxCurve.toArray().length;
+
+                // 四角形の場合は頂点数が4となる
+                if (vertices == 4) {
+                    double area = Imgproc.contourArea(approxCurve);
+                    Log.i(TAG, String.valueOf(area));
+                    Log.i(TAG, Arrays.toString(approxCurve.toArray()));
+                    if(area>4000){
+                        if(area<6000){
+                            contour_list.add(0, new MatOfPoint(approxCurve.toArray()));
+                            Log.i(TAG, Arrays.toString(approxCurve.toArray()));
+                        }
+                    }
+                }
             }
 
-        } catch (Exception e) {
+            MatOfPoint2f src = new MatOfPoint2f(contour_list.get(0).toArray());
+            Log.i(TAG, Arrays.toString(contour_list.get(0).toArray()));
+            org.opencv.core.Point[] dstPoints = new org.opencv.core.Point[4];
+            dstPoints[0] = new org.opencv.core.Point(825, 0);
+            dstPoints[1] = new org.opencv.core.Point(0, 0);
+            dstPoints[2] = new org.opencv.core.Point(0, 474);
+            dstPoints[3] = new org.opencv.core.Point(825, 474);
+            MatOfPoint2f dst = new MatOfPoint2f(dstPoints);
+            Mat perspectiveMatrix = Imgproc.getPerspectiveTransform(src, dst);
+            Mat mini_undistorted_warp = new Mat();
+            Imgproc.warpPerspective(mini_image_undistorted, mini_undistorted_warp, perspectiveMatrix, new Size(825, 474));
+            api.saveMatImage(mini_undistorted_warp,"mini_warp.png");
+
+            QRCodeDetector qrc_detector = new QRCodeDetector();
+            Mat mini_binary = new Mat();
+            QRcode_content = qrc_detector.detectAndDecode(mini_undistorted_warp);
+            Log.i(TAG, "QRCode_content is{{{" + QRcode_content + "}}}");
+            QRcode_content = QRMessegeConverter(QRcode_content);
+            if(QRcode_content != "MISS"){
+                Log.i(TAG, "QRCode_content is" + QRcode_content + "");
+                return QRcode_content;
+            }
+            for(int n=9; n<20; n++){
+                Log.i(TAG, "threshhold param =" + String.valueOf(n));
+                Imgproc.threshold(mini_undistorted_warp, mini_binary, n*10, 255,  Imgproc.THRESH_BINARY);
+                QRcode_content = qrc_detector.detectAndDecode(mini_binary);
+                Log.i(TAG, "QRCode_content is{{{" + QRcode_content + "}}}");
+                api.saveMatImage(mini_binary,"mini_warp_binary"+String.valueOf(n)+".png");
+                QRcode_content = QRMessegeConverter(QRcode_content);
+                if(QRcode_content != "MISS"){
+                    Log.i(TAG, "QRCode_content is" + QRcode_content + "");
+                    return QRcode_content;
+                }
+            }
+            Log.i(TAG, "QRCode_content is{{{" + QRcode_content + "}}}");
+
+        } catch(Exception e){
+            Log.i(TAG, "Error Occation");
             ;
         }
+
+        return QRcode_content;
+    }
+    private String QRMessegeConverter(String string) {
         /**
          * QRCode_CONTENT to REPORT_MESSEGE
          */
-        switch (QRcode_content) {
+        switch (string) {
             case "JEM":
-                QRcode_content = "STAY_AT_JEM";
+                string = "STAY_AT_JEM";
                 break;
             case "COLUMBUS":
-                QRcode_content = "GO_TO_COLUMBUS";
+                string = "GO_TO_COLUMBUS";
                 break;
             case "RACK1":
-                QRcode_content = "CHECK_RACK_1";
+                string = "CHECK_RACK_1";
                 break;
             case "ASTROBEE":
-                QRcode_content = "I_AM_HERE";
+                string = "I_AM_HERE";
                 break;
             case "INTBALL":
-                QRcode_content = "LOOKING_FORWARD_TO_SEE_YOU";
+                string = "LOOKING_FORWARD_TO_SEE_YOU";
                 break;
             case "BLANK":
-                QRcode_content = "NO_PROBLEM";
+                string = "NO_PROBLEM";
                 break;
             default:
-                QRcode_content = "";
+                string = "MISS";
                 break;
         }
-        return QRcode_content;
+        return string;
     }
-
     private double minimum_distance(int start,int end){
         List<Integer> route = dijkstra(start,end);
         double distance = 0;
