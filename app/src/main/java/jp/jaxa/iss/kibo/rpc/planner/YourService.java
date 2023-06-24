@@ -409,7 +409,7 @@ public class YourService extends KiboRpcService {
                     Log.i(TAG, String.valueOf(area));
                     Log.i(TAG, Arrays.toString(approxCurve.toArray()));
                     if(area>4000){
-                        if(area<6000){
+                        if(area<6500){
                             contour_list.add(0, new MatOfPoint(approxCurve.toArray()));
                             Log.i(TAG, Arrays.toString(approxCurve.toArray()));
                         }
