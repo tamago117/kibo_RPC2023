@@ -192,7 +192,7 @@ public class YourService extends KiboRpcService {
             point[1] = TargetPoint(ActiveTargets.get(1));
 
             //残り時間が近くなったら点数の高いところから移動する．
-            if(api.getTimeRemaining().get(1)<Global.RemainingTime + 0.5*60*1000 && point[0] < point[1]){
+            if(api.getTimeRemaining().get(1)<Global.RemainingTime + 5*60*100 && point[0] < point[1]){
                 //順番を交換
                 int temp = ActiveTargets.get(0);
                 ActiveTargets.set(0,ActiveTargets.get(1));
@@ -528,7 +528,7 @@ public class YourService extends KiboRpcService {
     private double minimum_distance(int start,int end){
         List<Integer> route = dijkstra(start,end);
         double distance = 0;
-        for (int n = 0; n < route.size() - 1; n++) {
+        for (int n = 1; n < route.size() - 1; n++) {
             distance = distance + adjacency_matrix.graph[route.get(n)][route.get(n + 1)];
         }
         return distance;
