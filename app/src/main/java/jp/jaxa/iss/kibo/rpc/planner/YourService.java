@@ -408,22 +408,49 @@ public class YourService extends KiboRpcService {
                     double area = Imgproc.contourArea(approxCurve);
                     Log.i(TAG, String.valueOf(area));
                     Log.i(TAG, Arrays.toString(approxCurve.toArray()));
-                    if(area>4000){
-                        if(area<6500){
-                            contour_list.add(0, new MatOfPoint(approxCurve.toArray()));
-                            Log.i(TAG, Arrays.toString(approxCurve.toArray()));
-                        }
+                    if(area > 4500 && area < 6500){
+                        contour_list.add(0, new MatOfPoint(approxCurve.toArray()));
+                        Log.i(TAG, Arrays.toString(approxCurve.toArray()));
                     }
                 }
             }
 
-            MatOfPoint2f src = new MatOfPoint2f(contour_list.get(0).toArray());
+            // sort approx
+            org.opencv.core.Point[] tempPoints = new org.opencv.core.Point[8];
+            tempPoints[0] = contour_list.get(0).toArray()[0];
+            tempPoints[1]  = contour_list.get(0).toArray()[1];
+            tempPoints[2]  = contour_list.get(0).toArray()[2];
+            tempPoints[3]  = contour_list.get(0).toArray()[3];
+            tempPoints[4] = contour_list.get(0).toArray()[0];
+            tempPoints[5]  = contour_list.get(0).toArray()[1];
+            tempPoints[6]  = contour_list.get(0).toArray()[2];
+            tempPoints[7]  = contour_list.get(0).toArray()[3];
+            double[] vector = new double[4];
+            double max_vector = 0;
+            int max_vector_index = -1;
+            // 右下を見つける
+            for(int i=0;i<4;i++){
+                vector[i] = tempPoints[i].x * tempPoints[i].x * tempPoints[i].y * tempPoints[i].y;
+                if(max_vector < vector[i]){
+                    max_vector = vector[i];
+                    max_vector_index = i;
+                }
+            }
+            // 右下、右上、左上、左下
+            org.opencv.core.Point[] srcPoints = new org.opencv.core.Point[4];
+            srcPoints[0] = tempPoints[max_vector_index];
+            srcPoints[1] = tempPoints[max_vector_index+1];
+            srcPoints[2] = tempPoints[max_vector_index+2];
+            srcPoints[3] = tempPoints[max_vector_index+3];
+            MatOfPoint2f src = new MatOfPoint2f(srcPoints);
+
+//            MatOfPoint2f src = new MatOfPoint2f(contour_list.get(0).toArray());
             Log.i(TAG, Arrays.toString(contour_list.get(0).toArray()));
             org.opencv.core.Point[] dstPoints = new org.opencv.core.Point[4];
-            dstPoints[0] = new org.opencv.core.Point(825, 0);
-            dstPoints[1] = new org.opencv.core.Point(0, 0);
-            dstPoints[2] = new org.opencv.core.Point(0, 474);
-            dstPoints[3] = new org.opencv.core.Point(825, 474);
+            dstPoints[0] = new org.opencv.core.Point(825, 474);
+            dstPoints[1] = new org.opencv.core.Point(825, 0);
+            dstPoints[2] = new org.opencv.core.Point(0, 0);
+            dstPoints[3] = new org.opencv.core.Point(0, 474);
             MatOfPoint2f dst = new MatOfPoint2f(dstPoints);
             Mat perspectiveMatrix = Imgproc.getPerspectiveTransform(src, dst);
             Mat mini_undistorted_warp = new Mat();
@@ -439,9 +466,9 @@ public class YourService extends KiboRpcService {
                 Log.i(TAG, "QRCode_content is" + QRcode_content + "");
                 return QRcode_content;
             }
-            for(int n=9; n<20; n++){
+            for(int n=45; n<75; n++){
                 Log.i(TAG, "threshhold param =" + String.valueOf(n));
-                Imgproc.threshold(mini_undistorted_warp, mini_binary, n*10, 255,  Imgproc.THRESH_BINARY);
+                Imgproc.threshold(mini_undistorted_warp, mini_binary, n*2, 255,  Imgproc.THRESH_BINARY);
                 QRcode_content = qrc_detector.detectAndDecode(mini_binary);
                 Log.i(TAG, "QRCode_content is{{{" + QRcode_content + "}}}");
                 api.saveMatImage(mini_binary,"mini_warp_binary"+String.valueOf(n)+".png");
