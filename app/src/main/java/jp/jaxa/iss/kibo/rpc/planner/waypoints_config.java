@@ -13,11 +13,11 @@ public interface waypoints_config {
         //wp1,2 => 7~8
         //start -> (wp1)
         //goal -> (point4, wp3)
-        // point1 -> ( point5, point6, wp2, wp3)
+        // point1 -> (point2 point5, point6, wp2, wp3)
         Waypoint point1 = new Waypoint(11.318, -9.8, 5.251,
                 0.707, -0.707, 0, 0,
                 0, 0, 0);
-        // point2 -> (wp1, wp2)
+        // point2 -> (point1,wp1, wp2)
         Waypoint point2 = new Waypoint(10.625, -9.144, 4.6,
                 0, 0.707, 0, 0.707,
                 0, 0, 0);    // Point
@@ -54,10 +54,6 @@ public interface waypoints_config {
         Waypoint wp3 = new Waypoint(10.571, -7.463, 5.326,
                 0, 0, -0.707, 0.707,
                 0, 0, 0.0);    // way point
-
-        Waypoint QR = new Waypoint(11.362, -8.615, 4.883,
-                -0.5, 0.5, 0.5, 0.5,
-                0, 0, 0);    // QRcode
 
 
 }

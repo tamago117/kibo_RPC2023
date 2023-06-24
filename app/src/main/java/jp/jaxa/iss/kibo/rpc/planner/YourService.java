@@ -185,7 +185,9 @@ public class YourService extends KiboRpcService {
         //最短距離となるように目標ターゲットの順番を変更
         if (index == 2) {
             distance[0] = minimum_distance(Global.Nowplace,ActiveTargets.get(0)-1);
+            Log.i(TAG,"distance[0]"+distance[0]);
             distance[1] = minimum_distance(Global.Nowplace,ActiveTargets.get(1)-1);
+            Log.i(TAG,"distance[1]"+distance[1]);
             point[0] = TargetPoint(ActiveTargets.get(0));
             point[1] = TargetPoint(ActiveTargets.get(1));
 
@@ -229,6 +231,7 @@ public class YourService extends KiboRpcService {
                 //Log.i(TAG, "Let's go to node " +route.get(n).toString());
                 //ここにフェーズタイムの監視機能を入れる．if文とbreak
                 if(Phase_monitoring()){
+                    Log.i(TAG,"フェーズブレイク！！！");
                     break phasebreak;
                 }
                 Waypoint2Number(route.get(n));
