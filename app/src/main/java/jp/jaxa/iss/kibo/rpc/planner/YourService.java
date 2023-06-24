@@ -213,10 +213,15 @@ public class YourService extends KiboRpcService {
             Log.i(TAG,"Gotarget内での現在位置"+Global.Nowplace);
             List<Integer>route = dijkstra(Global.Nowplace,ActiveTargets.get(i)-1); //-1はゼロオリジンへの修正
             Log.i(TAG,"Route"+route.toString());
+            boolean terminaitFlag = false;
 
             if(ActiveTargets.get(i)!=3) {
                 if(Complete_confirme(false)) {
                     break phasebreak;
+                }
+            }else if(ActiveTargets.get(i) == 3){
+                if(api.getTimeRemaining().get(1)<Global.RemainingTime){
+                    terminaitFlag = true;
                 }
             }
 
@@ -242,7 +247,7 @@ public class YourService extends KiboRpcService {
             }
             api.laserControl(true);
             api.takeTargetSnapshot(ActiveTargets.get(i));
-            if(ActiveTargets.get(i)==3) {
+            if(terminaitFlag) {
                 if(Complete_confirme(true)) {
                     break phasebreak;
                 }
