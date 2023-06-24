@@ -217,6 +217,7 @@ public class YourService extends KiboRpcService {
             Log.i(TAG,"Route"+route.toString());
             boolean terminaitFlag = false;
 
+
             if(ActiveTargets.get(i)!=3) {
                 if(Complete_confirme(false)) {
                     break phasebreak;
@@ -528,7 +529,7 @@ public class YourService extends KiboRpcService {
         List<Integer> route = dijkstra(start,end);
         double distance = 0;
         for (int n = 0; n < route.size() - 1; n++) {
-            distance = adjacency_matrix.graph[route.get(n)][route.get(n + 1)];
+            distance = distance + adjacency_matrix.graph[route.get(n)][route.get(n + 1)];
         }
         return distance;
 
