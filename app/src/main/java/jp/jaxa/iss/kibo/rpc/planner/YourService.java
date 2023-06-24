@@ -50,7 +50,7 @@ public class YourService extends KiboRpcService {
         Log.i(TAG, "start!!!!!!!!!!!!!!!!");
         MoveToWaypoint(waypoints_config.wp1); // initial point
         Global.Nowplace = 7;
-        
+
         //////////////ここから探索//////////////////////////
         while (!Global.Finflag ){
             //phaseの時間を取得
@@ -309,8 +309,7 @@ public class YourService extends KiboRpcService {
     }
     // ゼロオリジンで考えたときのウェイポイントの番号
     private void Waypoint2Number(int n){
-        Global.Nowplace = n; //現在位置の変更
-        Log.i(TAG,"Now_place is "+ Global.Nowplace);
+        Log.i(TAG,"現在位置は "+ Global.Nowplace);
         switch (n){
             case 0:
                 MoveToWaypoint(waypoints_config.point1);
@@ -343,6 +342,8 @@ public class YourService extends KiboRpcService {
                 MoveToWaypoint(waypoints_config.wp3);
                 break;
         }
+        Global.Nowplace = n; //現在位置の変更
+        Log.i(TAG,"移動完了．現在位置は "+ Global.Nowplace);
     }
 
     /**
