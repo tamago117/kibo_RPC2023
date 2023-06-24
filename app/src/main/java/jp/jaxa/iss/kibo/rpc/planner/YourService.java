@@ -50,24 +50,16 @@ public class YourService extends KiboRpcService {
         Log.i(TAG, "start!!!!!!!!!!!!!!!!");
         MoveToWaypoint(waypoints_config.wp1); // initial point
         Global.Nowplace = 7;
+        
         //////////////ここから探索//////////////////////////
-        //Long ActiveTime = Time.get(0); //現在のフェーズの残り時間(ミリ秒)
-        //Long MissionTime = Time.get(1); //ミッション残り時間(ミリ秒)
-        //List<Long> Time = api.getTimeRemaining();
-
-
         while (!Global.Finflag ){
             //phaseの時間を取得
             Global.PhaseRemaintime = api.getTimeRemaining().get(0);
             Log.i(TAG,"runPlan1内での現在位置"+Global.Nowplace);
             GoTarget(api.getActiveTargets());
         }
-        //Log.i(TAG,"go to goal");
-        //MoveToWaypoint(waypoints_config.goal_point);
-
-        //api.notifyGoingToGoal();
-        //api.reportMissionCompletion(Global.report);
-
+        api.notifyGoingToGoal();
+        api.reportMissionCompletion(Global.report);
     }
 
     @Override
@@ -524,20 +516,16 @@ public class YourService extends KiboRpcService {
                     //Log.i(TAG, "Let's go to node " +route.get(n).toString());
                     Waypoint2Number(route.get(n));
                 }
-                api.notifyGoingToGoal();
-                api.reportMissionCompletion(Global.report);
                 Global.Finflag = true;
-                return false;
+                return true;
             }
         }else{
             if(api.getTimeRemaining().get(1)<Global.RemainingTime){
-                api.notifyGoingToGoal();
-                api.reportMissionCompletion(Global.report);
                 Global.Finflag = true;
-                return false;
+                return true;
             }
         }
-        return true;
+        return false;
     }
     private int TargetPoint(int Target){
         switch (Target){
