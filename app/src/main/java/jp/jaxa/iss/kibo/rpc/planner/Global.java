@@ -9,4 +9,5 @@ public class Global {
     //1.0は50％ぐらい
     public static double RemainingTime = 1.25*60*1000; //残り時間
     public static double PhaseRemaintime = 0;
+    public static boolean Finflag = false;
 }

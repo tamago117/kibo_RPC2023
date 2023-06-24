@@ -50,24 +50,13 @@ public class YourService extends KiboRpcService {
         Log.i(TAG, "start!!!!!!!!!!!!!!!!");
         MoveToWaypoint(waypoints_config.wp1); // initial point
         Global.Nowplace = 7;
-        /*
-        MoveToWaypoint(waypoints_config.wp2); // QR point
-        Global.Nowplace = 8;
-        ///////////////ここでQRを読み込む///////////////////
-        Mat image = new Mat();
-        api.flashlightControlFront(0.0f);
-        image = api.getMatNavCam();
-        api.saveMatImage(image,"wp2.png");
-        Global.report = read_QRcode(image);
-        ////////////////////////////////////////////////////
-        */
         //////////////ここから探索//////////////////////////
         //Long ActiveTime = Time.get(0); //現在のフェーズの残り時間(ミリ秒)
         //Long MissionTime = Time.get(1); //ミッション残り時間(ミリ秒)
         //List<Long> Time = api.getTimeRemaining();
 
 
-        while (true){
+        while (!Global.Finflag ){
             //phaseの時間を取得
             Global.PhaseRemaintime = api.getTimeRemaining().get(0);
             Log.i(TAG,"runPlan1内での現在位置"+Global.Nowplace);
@@ -234,7 +223,9 @@ public class YourService extends KiboRpcService {
             Log.i(TAG,"Route"+route.toString());
 
             if(ActiveTargets.get(i)!=3) {
-                Complete_confirme(false);
+                if(Complete_confirme(false)) {
+                    break phasebreak;
+                }
             }
 
             for(int n = 2; n<route.size();n++){ //n = 0,1はスタート地点なのでスキップ
@@ -260,7 +251,9 @@ public class YourService extends KiboRpcService {
             api.laserControl(true);
             api.takeTargetSnapshot(ActiveTargets.get(i));
             if(ActiveTargets.get(i)==3) {
-                Complete_confirme(true);
+                if(Complete_confirme(true)) {
+                    break phasebreak;
+                }
             }
             ++i;
         }
@@ -518,7 +511,7 @@ public class YourService extends KiboRpcService {
         }
         return false;
     }
-    private void Complete_confirme(boolean terminate) {
+    private boolean Complete_confirme(boolean terminate) {
         //Long ActiveTime = Time.get(0); //現在のフェーズの残り時間(ミリ秒)
         //Long MissionTime = Time.get(1); //ミッション残り時間(ミリ秒)
 
@@ -533,13 +526,18 @@ public class YourService extends KiboRpcService {
                 }
                 api.notifyGoingToGoal();
                 api.reportMissionCompletion(Global.report);
+                Global.Finflag = true;
+                return false;
             }
         }else{
             if(api.getTimeRemaining().get(1)<Global.RemainingTime){
                 api.notifyGoingToGoal();
                 api.reportMissionCompletion(Global.report);
+                Global.Finflag = true;
+                return false;
             }
         }
+        return true;
     }
     private int TargetPoint(int Target){
         switch (Target){
