@@ -545,7 +545,7 @@ public class YourService extends KiboRpcService {
         //Long MissionTime = Time.get(1); //ミッション残り時間(ミリ秒)
 
         if(!terminate){
-            if (api.getTimeRemaining().get(1) < Global.RemainingTime) {
+            if (api.getTimeRemaining().get(1) < Global.RemainingTime && Global.Nowplace != 0) {
                 Log.i(TAG, "go to goal");
                 List<Integer> route = dijkstra(Global.Nowplace, 6);
                 Log.i(TAG, "Route" + route.toString());
@@ -553,6 +553,9 @@ public class YourService extends KiboRpcService {
                     //Log.i(TAG, "Let's go to node " +route.get(n).toString());
                     Waypoint2Number(route.get(n));
                 }
+                Global.Finflag = true;
+                return true;
+            }else if(api.getTimeRemaining().get(1) < Global.RemainingTime && Global.Nowplace == 0){
                 Global.Finflag = true;
                 return true;
             }
