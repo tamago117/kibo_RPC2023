@@ -30,8 +30,4 @@ public class Waypoint {
         this.avoidY = avoidY;
         this.avoidZ = avoidZ;
     }
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
 }

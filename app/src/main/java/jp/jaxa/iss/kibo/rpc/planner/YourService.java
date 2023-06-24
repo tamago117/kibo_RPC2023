@@ -2,26 +2,14 @@ package jp.jaxa.iss.kibo.rpc.planner;
 
 import android.util.Log;
 
-<<<<<<< Updated upstream
-import gov.nasa.arc.astrobee.PendingResult;
-import gov.nasa.arc.astrobee.internal.BaseRobot;
-import gov.nasa.arc.astrobee.internal.BaseRobotImpl;
-import gov.nasa.arc.astrobee.internal.CommandBuilder;
-import gov.nasa.arc.astrobee.internal.Publishable;
-import gov.nasa.arc.astrobee.types.FlightMode;
-=======
 import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
 
 import java.util.List;
->>>>>>> Stashed changes
 import gov.nasa.arc.astrobee.Result;
 import gov.nasa.arc.astrobee.Kinematics;
 import gov.nasa.arc.astrobee.types.Point;
 import gov.nasa.arc.astrobee.types.Quaternion;
-import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
 
-<<<<<<< Updated upstream
-=======
 import org.opencv.aruco.Aruco;
 import org.opencv.aruco.Dictionary;
 
@@ -35,79 +23,30 @@ import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 
-import org.opencv.objdetect.QRCodeDetector;
-
 import org.opencv.imgproc.Imgproc;
+
+import org.opencv.objdetect.QRCodeDetector;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
->>>>>>> Stashed changes
 import java.util.List;
-<<<<<<< Updated upstream
-
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfPoint2f;
-import org.opencv.core.CvType;
-import org.opencv.imgproc.Imgproc;
-import org.opencv.core.Rect;
-import org.opencv.objdetect.QRCodeDetector;
-
-=======
->>>>>>> Stashed changes
 /**
  * Class meant to handle commands from the Ground Data System and execute them in Astrobee
  */
 
 public class YourService extends KiboRpcService {
+    private static final double INF = Double.POSITIVE_INFINITY; // 非接続を示すための無限大の値
     private final String TAG = this.getClass().getSimpleName();
-<<<<<<< Updated upstream
-=======
 
->>>>>>> Stashed changes
 
     @Override
     protected void runPlan1(){
-        int loop_counter = 0;
-        int target_id;
 
-        // the mission starts
+        /*//////////////////////////////
+        //      mission start         //
+        /*//////////////////////////////
         api.startMission();
-<<<<<<< Updated upstream
-
-        /*
-        * Move Point7
-        * */
-        MoveToWaypoint(waypoints_config.wp1);
-        MoveToWaypoint(waypoints_config.point7);
-
-<<<<<<< Updated upstream
-        // Savefig
-        Mat image = new Mat();
-        image = api.getMatNavCam();
-        api.saveMatImage(image,"point7_nav.png");
-
-        // turn on the front flash light
-        api.flashlightControlFront(0.05f);
-
-        // turn off the front flash light
-        api.flashlightControlFront(0.00f);
-
-        // get QR code content
-        String mQrContent = read_QRcode(image);
-
-
-        // notify that astrobee is heading to the goal
-=======
-        ///////////////ここでQRを読み込む///////////////////
-        Mat image = new Mat();
-        image = api.getMatNavCam();
-        api.saveMatImage(image,"wp2.png");
-        String report = read_QRcode(image);
-        ////////////////////////////////////////////////////
-
-
-=======
         Log.i(TAG, "start!!!!!!!!!!!!!!!!");
         MoveToWaypoint(waypoints_config.wp1); // initial point
         Global.Nowplace = 7;
@@ -121,7 +60,6 @@ public class YourService extends KiboRpcService {
 //        Global.report = read_QRcode(image);
         ////////////////////////////////////////////////////
 
->>>>>>> Stashed changes
         //////////////ここから探索//////////////////////////
         //Long ActiveTime = Time.get(0); //現在のフェーズの残り時間(ミリ秒)
         //Long MissionTime = Time.get(1); //ミッション残り時間(ミリ秒)
@@ -131,30 +69,14 @@ public class YourService extends KiboRpcService {
             Log.i(TAG,"runPlan1内での現在位置"+Global.Nowplace);
             GoTarget(api.getActiveTargets());
         }
-<<<<<<< Updated upstream
-        Log.i(TAG,"go to goal");
-        MoveToWaypoint(waypoints_config.goal_point);
-
->>>>>>> Stashed changes
-        api.notifyGoingToGoal();
-
-        /* ********************************************************** */
-        /* write your own code to move Astrobee to the goal positiion */
-        /* ********************************************************** */
-=======
         //Log.i(TAG,"go to goal");
         //MoveToWaypoint(waypoints_config.goal_point);
 
         //api.notifyGoingToGoal();
         //api.reportMissionCompletion(Global.report);
->>>>>>> Stashed changes
 
-        // send mission completion
-        api.reportMissionCompletion(mQrContent);
     }
 
-<<<<<<< Updated upstream
-=======
     @Override
     protected void runPlan2(){
         // write your plan 2 here
@@ -194,7 +116,6 @@ public class YourService extends KiboRpcService {
     }
 
 
->>>>>>> Stashed changes
     private void MoveToWaypoint(Waypoint name){
 
         final int LOOP_MAX = 10;
@@ -221,59 +142,41 @@ public class YourService extends KiboRpcService {
         }
     }
 
-    // You can add your method
-    private String read_QRcode(Mat image){
-        String QRcode_content = "";
-        try{
-            api.saveMatImage(image,"QR.png");
-//        Mat mini_image = new Mat(image, new Rect(320, 240, 640, 480));
-            Mat mini_image = new Mat(image, new Rect(480, 360, 320, 240));
-            api.saveMatImage(mini_image,"QR_mini.png");
-
-            MatOfPoint2f points = new MatOfPoint2f();
-            Mat straight_qrcode = new Mat();
-            QRCodeDetector qrc_detector = new QRCodeDetector();
-            Boolean detect_success = qrc_detector.detect(mini_image, points);
-            Log.i(TAG,"detect_success is " + detect_success.toString());
-
-            QRcode_content = qrc_detector.detectAndDecode(mini_image, points, straight_qrcode);
-            if(QRcode_content != null){
-                Mat straight_qrcode_gray = new Mat();
-                straight_qrcode.convertTo(straight_qrcode_gray, CvType.CV_8UC1);
-                api.saveMatImage(straight_qrcode_gray,"QR_binary.png");
-            }
-            Log.i(TAG,"QRCode_content is " + QRcode_content);
-
-<<<<<<< Updated upstream
-        } catch(Exception e){
-            ;
+    private void Print_AR(List<Mat> corners, Mat markerIds) {
+        for (int n = 0; n < 4; n++) {
+            Log.i(TAG, "markerIds:" + Arrays.toString(markerIds.get(n,0)));
+            Log.i(TAG, "左上:" + Arrays.toString(corners.get(n).get(0, 0)));
+            Log.i(TAG, "右上:" + Arrays.toString(corners.get(n).get(0, 1)));
+            Log.i(TAG, "右下:" + Arrays.toString(corners.get(n).get(0, 2)));
+            Log.i(TAG, "左下:" + Arrays.toString(corners.get(n).get(0, 3)));
         }
+    }
 
-        /**
-         * QRCode_CONTENT to REPORT_MESSEGE
-         */
-        switch(QRcode_content){
-            case "JEM":
-                QRcode_content = "STAY_AT_JEM";
-                break;
-            case "COLUMBUS":
-                QRcode_content = "GO_TO_COLUMBUS";
-                break;
-            case "RACK1":
-                QRcode_content = "CHECK_RACK_1";
-                break;
-            case "ASTROBEE":
-                QRcode_content = "I_AM_HERE";
-                break;
-            case "INTBALL":
-                QRcode_content = "LOOKING_FORWARD_TO_SEE_YOU";
-                break;
-            case "BLANK":
-                QRcode_content = "NO_PROBLEM";
-                break;
-            default:
-                QRcode_content = "";
-=======
+    //右下のマーカを見つける
+    private int findBottomRight(List<Mat> corners){
+        Log.i(TAG,"start findBottomRight");
+        // out = 関数のreturn
+        int out = 0;
+        int temp = 0;
+
+        //corners.get(n).get(0, 0) -> n番目のマーカの右下のxy座標を取得
+        for(int n=0; n<4; n++){
+            Log.i(TAG,"Loop" + n );
+            // 三平方の定理で一番数字が大きいものは遠いことを用いる
+            // a^2 + b^2 = c^2
+            double[] ab = corners.get(n).get(0,2);
+            int c = (int)ab[0] * (int)ab[0] + (int)ab[1] * (int)ab[1];
+            if(temp < c ){
+                temp = c;
+                out = n;
+                Log.i(TAG,"change");
+            }
+        }
+        // 右下（一番遠い）のは配列の何番目かをreturn
+        Log.i(TAG,"finish findBottomRight");
+        return out;
+    }
+
     // Kinematics Github
     // https://github.com/nasa/astrobee_android/blob/a8560ab0270ac281d8eadeb48645f4224582985e/astrobee_api/api/src/main/java/gov/nasa/arc/astrobee/Kinematics.java
     private void LoggingKinematics(){
@@ -445,14 +348,9 @@ public class YourService extends KiboRpcService {
                 break;
             case 9:
                 MoveToWaypoint(waypoints_config.wp3);
->>>>>>> Stashed changes
                 break;
         }
-
-        return QRcode_content;
-
     }
-
 
     /**
      * FUNCTIONs ABOUT QRCODE
@@ -478,11 +376,6 @@ public class YourService extends KiboRpcService {
                 Rect(int x, int y, int width, int height )
              */
             api.saveMatImage(image,"QR.png");
-<<<<<<< Updated upstream
-            Mat mini_image = new Mat(image, new Rect(700, 360, 240, 240)); // ここの値は切り取る領域
-            api.saveMatImage(mini_image,"QR_mini.png");
-=======
->>>>>>> Stashed changes
 
             Mat image_undistorted = new Mat();
             Imgproc.undistort(image,image_undistorted,cameraMatrix,distortionCoefficients);
