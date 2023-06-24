@@ -7,7 +7,7 @@ public class Global {
     //0.5は30秒Over
     //0.75は10秒~1分ぐらい
     //1.0は50％ぐらい
-    public static long RemainingTime = 135*60*10; //残り時間(1.3*60*1000を変更した)
+    public static long RemainingTime = 133*60*10; //残り時間(1.3*60*1000を変更した)
     public static long PhaseRemaintime = 0;
     public static boolean Finflag = false;
 }
