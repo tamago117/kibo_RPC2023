@@ -6,6 +6,7 @@ public class Global {
     public static String report= "STAY_AT_JEM";
     //0.5は30秒Over
     //0.75は10秒~1分ぐらい
-
-    public static double RemainingTime = 1.0*60*1000; //残り時間
+    //1.0は50％ぐらい
+    public static double RemainingTime = 1.25*60*1000; //残り時間
+    public static double PhaseRemaintime = 0;
 }

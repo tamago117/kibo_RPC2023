@@ -50,6 +50,7 @@ public class YourService extends KiboRpcService {
         Log.i(TAG, "start!!!!!!!!!!!!!!!!");
         MoveToWaypoint(waypoints_config.wp1); // initial point
         Global.Nowplace = 7;
+        /*
         MoveToWaypoint(waypoints_config.wp2); // QR point
         Global.Nowplace = 8;
         ///////////////ここでQRを読み込む///////////////////
@@ -59,13 +60,16 @@ public class YourService extends KiboRpcService {
         api.saveMatImage(image,"wp2.png");
         Global.report = read_QRcode(image);
         ////////////////////////////////////////////////////
-
+        */
         //////////////ここから探索//////////////////////////
         //Long ActiveTime = Time.get(0); //現在のフェーズの残り時間(ミリ秒)
         //Long MissionTime = Time.get(1); //ミッション残り時間(ミリ秒)
         //List<Long> Time = api.getTimeRemaining();
 
+
         while (true){
+            //phaseの時間を取得
+            Global.PhaseRemaintime = api.getTimeRemaining().get(0);
             Log.i(TAG,"runPlan1内での現在位置"+Global.Nowplace);
             GoTarget(api.getActiveTargets());
         }
@@ -223,7 +227,7 @@ public class YourService extends KiboRpcService {
         }
         //
 
-        while(i < index){
+        phasebreak:while(i < index){
             Log.i(TAG, "Let's go Target" + ActiveTargets.get(i).toString());
             Log.i(TAG,"Gotarget内での現在位置"+Global.Nowplace);
             List<Integer>route = dijkstra(Global.Nowplace,ActiveTargets.get(i)-1); //-1はゼロオリジンへの修正
@@ -233,10 +237,25 @@ public class YourService extends KiboRpcService {
                 Complete_confirme(false);
             }
 
-            for(int n = 1; n<route.size();n++){ //n = 0はスタート地点なのでスキップ
+            for(int n = 2; n<route.size();n++){ //n = 0,1はスタート地点なのでスキップ
                 //Log.i(TAG, "Let's go to node " +route.get(n).toString());
                 //ここにフェーズタイムの監視機能を入れる．if文とbreak
+                if(Phase_monitoring()){
+                    break phasebreak;
+                }
                 Waypoint2Number(route.get(n));
+                //カメラ
+                if(Global.Nowplace==8 && Global.report=="MISS"){
+                    try {
+                        Thread.sleep(7000);
+                    } catch (InterruptedException e) {
+                    }
+                    Mat image = new Mat();
+                    api.flashlightControlFront(0.0f);
+                    image = api.getMatNavCam();
+                    api.saveMatImage(image,"wp2.png");
+                    Global.report = read_QRcode(image);
+                }
             }
             api.laserControl(true);
             api.takeTargetSnapshot(ActiveTargets.get(i));
@@ -493,7 +512,12 @@ public class YourService extends KiboRpcService {
         return distance;
 
     }
-
+    private boolean Phase_monitoring(){
+        if(api.getTimeRemaining().get(0) > Global.PhaseRemaintime) {
+            return true;
+        }
+        return false;
+    }
     private void Complete_confirme(boolean terminate) {
         //Long ActiveTime = Time.get(0); //現在のフェーズの残り時間(ミリ秒)
         //Long MissionTime = Time.get(1); //ミッション残り時間(ミリ秒)
@@ -503,7 +527,7 @@ public class YourService extends KiboRpcService {
                 Log.i(TAG, "go to goal");
                 List<Integer> route = dijkstra(Global.Nowplace, 6);
                 Log.i(TAG, "Route" + route.toString());
-                for (int n = 1; n < route.size(); n++) { //n = 0はスタート地点なのでスキップ
+                for (int n = 2; n < route.size(); n++) { //n = 0.1はスタート地点なのでスキップ
                     //Log.i(TAG, "Let's go to node " +route.get(n).toString());
                     Waypoint2Number(route.get(n));
                 }
