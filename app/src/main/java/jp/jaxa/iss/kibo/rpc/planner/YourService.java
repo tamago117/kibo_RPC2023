@@ -228,6 +228,11 @@ public class YourService extends KiboRpcService {
                 }
             }
 
+            if(api.getTimeRemaining().get(1)<Global.second_45){
+                Global.Finflag = true;
+                break phasebreak;
+            }
+
             for(int n = 2; n<route.size();n++){ //n = 0,1はスタート地点なのでスキップ
                 //Log.i(TAG, "Let's go to node " +route.get(n).toString());
                 //ここにフェーズタイムの監視機能を入れる．if文とbreak
