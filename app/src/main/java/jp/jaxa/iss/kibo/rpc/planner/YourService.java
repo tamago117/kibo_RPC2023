@@ -556,6 +556,20 @@ public class YourService extends KiboRpcService {
                 Global.Finflag = true;
                 return true;
             }else if(api.getTimeRemaining().get(1) < Global.RemainingTime && Global.Nowplace == 0){
+
+                /**
+                 * Target1を照射した後に59秒余ってるのにゴールまで動いてないので例外処理
+                 */
+                if(api.getTimeRemaining().get(1) > Global.second_54 ){
+                    Log.i(TAG, "go to goal");
+                    List<Integer> route = dijkstra(Global.Nowplace, 6);
+                    Log.i(TAG, "Route" + route.toString());
+                    for (int n = 2; n < route.size(); n++) { //n = 0.1はスタート地点なのでスキップ
+                        //Log.i(TAG, "Let's go to node " +route.get(n).toString());
+                        Waypoint2Number(route.get(n));
+                    }
+                }
+
                 Global.Finflag = true;
                 return true;
             }
