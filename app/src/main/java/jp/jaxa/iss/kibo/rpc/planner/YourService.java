@@ -1,8 +1,8 @@
 package jp.jaxa.iss.kibo.rpc.planner;
 
 import android.util.Log;
-import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
 
+import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
 
 import java.util.List;
 import gov.nasa.arc.astrobee.Result;
@@ -13,12 +13,15 @@ import gov.nasa.arc.astrobee.types.Quaternion;
 import org.opencv.aruco.Aruco;
 import org.opencv.aruco.Dictionary;
 
+import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfDouble;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.CvType;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 
 import org.opencv.imgproc.Imgproc;
 
@@ -28,7 +31,6 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 /**
  * Class meant to handle commands from the Ground Data System and execute them in Astrobee
  */
@@ -36,6 +38,7 @@ import java.util.List;
 public class YourService extends KiboRpcService {
     private static final double INF = Double.POSITIVE_INFINITY; // 非接続を示すための無限大の値
     private final String TAG = this.getClass().getSimpleName();
+
 
     @Override
     protected void runPlan1(){
@@ -46,38 +49,17 @@ public class YourService extends KiboRpcService {
         api.startMission();
         Log.i(TAG, "start!!!!!!!!!!!!!!!!");
         MoveToWaypoint(waypoints_config.wp1); // initial point
-
-        MoveToWaypoint(waypoints_config.wp2); // QR point
-
-        //nupeさんここ値の変更はまかせた
-        Global.Nowplace = 8;
-
-
-        ///////////////ここでQRを読み込む///////////////////
-        Mat image = api.getMatNavCam();
-        api.saveMatImage(image,"wp2.png");
-        String report = read_QRcode(image);
-        ////////////////////////////////////////////////////
-
-
-
+        Global.Nowplace = 7;
 
         //////////////ここから探索//////////////////////////
-        //Long ActiveTime = Time.get(0); //現在のフェーズの残り時間(ミリ秒)
-        //Long MissionTime = Time.get(1); //ミッション残り時間(ミリ秒)
-        //List<Long> Time = api.getTimeRemaining();
-
-        while (api.getTimeRemaining().get(1) >(5-4.0)*60*1000){
+        while (!Global.Finflag ){
+            //phaseの時間を取得
+            Global.PhaseRemaintime = api.getTimeRemaining().get(0);
             Log.i(TAG,"runPlan1内での現在位置"+Global.Nowplace);
             GoTarget(api.getActiveTargets());
         }
-        Log.i(TAG,"go to goal");
-        MoveToWaypoint(waypoints_config.goal_point);
-
         api.notifyGoingToGoal();
-        api.reportMissionCompletion(report);
-
-
+        api.reportMissionCompletion(Global.report);
     }
 
     @Override
@@ -197,13 +179,28 @@ public class YourService extends KiboRpcService {
         int index = ActiveTargets.size();
         int i = 0;
         double [] distance = new double[2];
+        int [] point = new int[2];
 
         Log.i(TAG,"アクティブターゲット"+ActiveTargets.toString());
         //最短距離となるように目標ターゲットの順番を変更
         if (index == 2) {
             distance[0] = minimum_distance(Global.Nowplace,ActiveTargets.get(0)-1);
+            Log.i(TAG,"distance[0]"+distance[0]);
             distance[1] = minimum_distance(Global.Nowplace,ActiveTargets.get(1)-1);
-            if(distance[0] > distance[1]){
+            Log.i(TAG,"distance[1]"+distance[1]);
+            point[0] = TargetPoint(ActiveTargets.get(0));
+            point[1] = TargetPoint(ActiveTargets.get(1));
+
+            //残り時間が近くなったら点数の高いところから移動する．
+            if(api.getTimeRemaining().get(1)<Global.RemainingTime + 5*60*100 && point[0] < point[1]){
+                //順番を交換
+                int temp = ActiveTargets.get(0);
+                ActiveTargets.set(0,ActiveTargets.get(1));
+                ActiveTargets.set(1,temp);
+                Log.i(TAG,"アクティブターゲットを交換"+ActiveTargets.toString());
+            }
+            //距離の近いところから行くために配列の順番を変更
+            else if(distance[0] > distance[1]){
                 //順番を交換
                 int temp = ActiveTargets.get(0);
                 ActiveTargets.set(0,ActiveTargets.get(1));
@@ -213,18 +210,57 @@ public class YourService extends KiboRpcService {
         }
         //
 
-        while(i < index){
+        phasebreak:while(i < index){
             Log.i(TAG, "Let's go Target" + ActiveTargets.get(i).toString());
             Log.i(TAG,"Gotarget内での現在位置"+Global.Nowplace);
             List<Integer>route = dijkstra(Global.Nowplace,ActiveTargets.get(i)-1); //-1はゼロオリジンへの修正
             Log.i(TAG,"Route"+route.toString());
+            boolean terminaitFlag = false;
 
-            for(int n = 1; n<route.size();n++){ //n = 0はスタート地点なのでスキップ
+
+            if(ActiveTargets.get(i)!=3) {
+                if(Complete_confirme(false)) {
+                    break phasebreak;
+                }
+            }else if(ActiveTargets.get(i) == 3){
+                if(api.getTimeRemaining().get(1)<Global.RemainingTime){
+                    terminaitFlag = true;
+                }
+            }
+
+            if(api.getTimeRemaining().get(1)<Global.second_45){
+                Global.Finflag = true;
+                break phasebreak;
+            }
+
+            for(int n = 2; n<route.size();n++){ //n = 0,1はスタート地点なのでスキップ
                 //Log.i(TAG, "Let's go to node " +route.get(n).toString());
+                //ここにフェーズタイムの監視機能を入れる．if文とbreak
+                if(Phase_monitoring()){
+                    Log.i(TAG,"フェーズブレイク！！！");
+                    break phasebreak;
+                }
                 Waypoint2Number(route.get(n));
+                //カメラ
+                if(Global.Nowplace==8 && Global.report=="MISS"){
+                    try {
+                        Thread.sleep(7000);
+                    } catch (InterruptedException e) {
+                    }
+                    Mat image = new Mat();
+                    api.flashlightControlFront(0.0f);
+                    image = api.getMatNavCam();
+                    api.saveMatImage(image,"wp2.png");
+                    Global.report = read_QRcode(image);
+                }
             }
             api.laserControl(true);
             api.takeTargetSnapshot(ActiveTargets.get(i));
+            if(terminaitFlag) {
+                if(Complete_confirme(true)) {
+                    break phasebreak;
+                }
+            }
             ++i;
         }
     }
@@ -287,8 +323,7 @@ public class YourService extends KiboRpcService {
     }
     // ゼロオリジンで考えたときのウェイポイントの番号
     private void Waypoint2Number(int n){
-        Global.Nowplace = n; //現在位置の変更
-        Log.i(TAG,"Now_place is "+ Global.Nowplace);
+        Log.i(TAG,"現在位置は "+ Global.Nowplace);
         switch (n){
             case 0:
                 MoveToWaypoint(waypoints_config.point1);
@@ -321,71 +356,252 @@ public class YourService extends KiboRpcService {
                 MoveToWaypoint(waypoints_config.wp3);
                 break;
         }
+        Global.Nowplace = n; //現在位置の変更
+        Log.i(TAG,"移動完了．現在位置は "+ Global.Nowplace);
     }
 
     /**
      * FUNCTIONs ABOUT QRCODE
      */
-    private String read_QRcode(Mat image) {
+
+    /**
+     * FUNCTIONs ABOUT QRCODE
+     */
+    private String read_QRcode(Mat image){
         String QRcode_content = "";
-        try {
-            api.saveMatImage(image, "QR.png");
-            Mat mini_image = new Mat(image, new Rect(700, 360, 240, 240)); // ここの値は切り取る領域
-            api.saveMatImage(mini_image, "QR_mini.png");
+        /*
+            NavCamのカメラ行列と歪み係数の取得
+         */
+        double[][] NavCamIntrinsics = api.getNavCamIntrinsics();
+        Mat cameraMatrix = new Mat(3,3,CvType.CV_32FC1);
+        cameraMatrix.put(0,0,NavCamIntrinsics[0]);
+        Mat distortionCoefficients = new Mat();
+        distortionCoefficients.put(0,0,NavCamIntrinsics[1]);
 
-            MatOfPoint2f points = new MatOfPoint2f();
-            Mat straight_qrcode = new Mat();
-            QRCodeDetector qrc_detector = new QRCodeDetector();
-            Boolean detect_success = qrc_detector.detect(mini_image, points);
-            Log.i(TAG, "detect_success is " + detect_success.toString());
+        try{
+            Log.i(TAG, "OPENCV_VERSION is " + Core.VERSION );
+            /*
+                Rect(int x, int y, int width, int height )
+             */
+            api.saveMatImage(image,"QR.png");
 
-            QRcode_content = qrc_detector.detectAndDecode(mini_image, points, straight_qrcode);
-            Log.i(TAG, "QRCode_content is " + QRcode_content);
-            if (QRcode_content != null) {
-                Mat straight_qrcode_gray = new Mat();
-                straight_qrcode.convertTo(straight_qrcode_gray, CvType.CV_8UC1);
-                api.saveMatImage(straight_qrcode_gray, "QR_binary.png");
+            Mat image_undistorted = new Mat();
+            Imgproc.undistort(image,image_undistorted,cameraMatrix,distortionCoefficients);
+            api.saveMatImage(image_undistorted,"QR_undistorted.png");
+
+            Mat mini_image_undistorted = new Mat(image_undistorted, new Rect(320, 320, 320, 320)); // ここの値は切り取る領域
+//            Mat mini_image_undistorted = new Mat(image_undistorted, new Rect(520, 360, 360, 360)); // 旧Waypoint2
+            api.saveMatImage(mini_image_undistorted,"QR_mini_undistorted.png");
+
+            // Colabで検証したものの再構築
+            Mat im = new Mat();
+            mini_image_undistorted.copyTo(im);
+            Imgproc.Canny(im, im, 30, 70);
+            api.saveMatImage(im,"mini_canny.png");
+            List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+            Mat hierarchy = new Mat();
+            Imgproc.findContours(im, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            Imgproc.drawContours(im, contours, -1, new Scalar(255,255,255), 5);
+            Core.bitwise_not(im,im);
+            api.saveMatImage(im,"mini_canny_draw_bitwise.png");
+
+            Imgproc.findContours(im, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            List<MatOfPoint> contour_list = new ArrayList<MatOfPoint>();
+            for (MatOfPoint contour : contours) {
+                // 輪郭を近似する
+                MatOfPoint2f approxCurve = new MatOfPoint2f();
+                MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
+                double epsilon = 0.05 * Imgproc.arcLength(contour2f, true);
+                Imgproc.approxPolyDP(contour2f, approxCurve, epsilon, true);
+
+                // 近似された輪郭の頂点数を取得する
+                int vertices = approxCurve.toArray().length;
+
+                // 四角形の場合は頂点数が4となる
+                if (vertices == 4) {
+                    double area = Imgproc.contourArea(approxCurve);
+                    Log.i(TAG, String.valueOf(area));
+                    Log.i(TAG, Arrays.toString(approxCurve.toArray()));
+                    if(area > 4500 && area < 6500){
+                        contour_list.add(0, new MatOfPoint(approxCurve.toArray()));
+                        Log.i(TAG, Arrays.toString(approxCurve.toArray()));
+                    }
+                }
             }
 
-        } catch (Exception e) {
+            // sort approx
+            org.opencv.core.Point[] tempPoints = new org.opencv.core.Point[8];
+            tempPoints[0] = contour_list.get(0).toArray()[0];
+            tempPoints[1]  = contour_list.get(0).toArray()[1];
+            tempPoints[2]  = contour_list.get(0).toArray()[2];
+            tempPoints[3]  = contour_list.get(0).toArray()[3];
+            tempPoints[4] = contour_list.get(0).toArray()[0];
+            tempPoints[5]  = contour_list.get(0).toArray()[1];
+            tempPoints[6]  = contour_list.get(0).toArray()[2];
+            tempPoints[7]  = contour_list.get(0).toArray()[3];
+            double[] vector = new double[4];
+            double max_vector = 0;
+            int max_vector_index = -1;
+            // 右下を見つける
+            for(int i=0;i<4;i++){
+                vector[i] = tempPoints[i].x * tempPoints[i].x * tempPoints[i].y * tempPoints[i].y;
+                if(max_vector < vector[i]){
+                    max_vector = vector[i];
+                    max_vector_index = i;
+                }
+            }
+            // 右下、右上、左上、左下
+            org.opencv.core.Point[] srcPoints = new org.opencv.core.Point[4];
+            srcPoints[0] = tempPoints[max_vector_index];
+            srcPoints[1] = tempPoints[max_vector_index+1];
+            srcPoints[2] = tempPoints[max_vector_index+2];
+            srcPoints[3] = tempPoints[max_vector_index+3];
+            MatOfPoint2f src = new MatOfPoint2f(srcPoints);
+
+//            MatOfPoint2f src = new MatOfPoint2f(contour_list.get(0).toArray());
+            Log.i(TAG, Arrays.toString(contour_list.get(0).toArray()));
+            org.opencv.core.Point[] dstPoints = new org.opencv.core.Point[4];
+            dstPoints[0] = new org.opencv.core.Point(825, 474);
+            dstPoints[1] = new org.opencv.core.Point(825, 0);
+            dstPoints[2] = new org.opencv.core.Point(0, 0);
+            dstPoints[3] = new org.opencv.core.Point(0, 474);
+            MatOfPoint2f dst = new MatOfPoint2f(dstPoints);
+            Mat perspectiveMatrix = Imgproc.getPerspectiveTransform(src, dst);
+            Mat mini_undistorted_warp = new Mat();
+            Imgproc.warpPerspective(mini_image_undistorted, mini_undistorted_warp, perspectiveMatrix, new Size(825, 474));
+            api.saveMatImage(mini_undistorted_warp,"mini_warp.png");
+
+            QRCodeDetector qrc_detector = new QRCodeDetector();
+            Mat mini_binary = new Mat();
+            QRcode_content = qrc_detector.detectAndDecode(mini_undistorted_warp);
+            Log.i(TAG, "QRCode_content is{{{" + QRcode_content + "}}}");
+            QRcode_content = QRMessegeConverter(QRcode_content);
+            if(QRcode_content != "MISS"){
+                Log.i(TAG, "QRCode_content is" + QRcode_content + "");
+                return QRcode_content;
+            }
+            for(int n=45; n<75; n++){
+                Log.i(TAG, "threshhold param =" + String.valueOf(n));
+                Imgproc.threshold(mini_undistorted_warp, mini_binary, n*2, 255,  Imgproc.THRESH_BINARY);
+                QRcode_content = qrc_detector.detectAndDecode(mini_binary);
+                Log.i(TAG, "QRCode_content is{{{" + QRcode_content + "}}}");
+                api.saveMatImage(mini_binary,"mini_warp_binary"+String.valueOf(n)+".png");
+                QRcode_content = QRMessegeConverter(QRcode_content);
+                if(QRcode_content != "MISS"){
+                    Log.i(TAG, "QRCode_content is" + QRcode_content + "");
+                    return QRcode_content;
+                }
+            }
+            Log.i(TAG, "QRCode_content is{{{" + QRcode_content + "}}}");
+
+        } catch(Exception e){
+            Log.i(TAG, "Error Occation");
             ;
         }
+
+        return QRcode_content;
+    }
+    private String QRMessegeConverter(String string) {
         /**
          * QRCode_CONTENT to REPORT_MESSEGE
          */
-        switch (QRcode_content) {
+        switch (string) {
             case "JEM":
-                QRcode_content = "STAY_AT_JEM";
+                string = "STAY_AT_JEM";
                 break;
             case "COLUMBUS":
-                QRcode_content = "GO_TO_COLUMBUS";
+                string = "GO_TO_COLUMBUS";
                 break;
             case "RACK1":
-                QRcode_content = "CHECK_RACK_1";
+                string = "CHECK_RACK_1";
                 break;
             case "ASTROBEE":
-                QRcode_content = "I_AM_HERE";
+                string = "I_AM_HERE";
                 break;
             case "INTBALL":
-                QRcode_content = "LOOKING_FORWARD_TO_SEE_YOU";
+                string = "LOOKING_FORWARD_TO_SEE_YOU";
                 break;
             case "BLANK":
-                QRcode_content = "NO_PROBLEM";
+                string = "NO_PROBLEM";
                 break;
             default:
-                QRcode_content = "";
+                string = "MISS";
                 break;
         }
-        return QRcode_content;
+        return string;
     }
-
     private double minimum_distance(int start,int end){
         List<Integer> route = dijkstra(start,end);
         double distance = 0;
-        for (int n = 0; n < route.size() - 1; n++) {
-            distance = adjacency_matrix.graph[route.get(n)][route.get(n + 1)];
+        for (int n = 1; n < route.size() - 1; n++) {
+            distance = distance + adjacency_matrix.graph[route.get(n)][route.get(n + 1)];
         }
         return distance;
 
     }
+    private boolean Phase_monitoring(){
+        if(api.getTimeRemaining().get(0) > Global.PhaseRemaintime) {
+            return true;
+        }
+        return false;
+    }
+    private boolean Complete_confirme(boolean terminate) {
+        //Long ActiveTime = Time.get(0); //現在のフェーズの残り時間(ミリ秒)
+        //Long MissionTime = Time.get(1); //ミッション残り時間(ミリ秒)
+
+        if(!terminate){
+            if (api.getTimeRemaining().get(1) < Global.RemainingTime && Global.Nowplace != 0) {
+                Log.i(TAG, "go to goal");
+                List<Integer> route = dijkstra(Global.Nowplace, 6);
+                Log.i(TAG, "Route" + route.toString());
+                for (int n = 2; n < route.size(); n++) { //n = 0.1はスタート地点なのでスキップ
+                    //Log.i(TAG, "Let's go to node " +route.get(n).toString());
+                    Waypoint2Number(route.get(n));
+                }
+                Global.Finflag = true;
+                return true;
+            }else if(api.getTimeRemaining().get(1) < Global.RemainingTime && Global.Nowplace == 0){
+
+                /**
+                 * Target1を照射した後に59秒余ってるのにゴールまで動いてないので例外処理
+                 */
+                if(api.getTimeRemaining().get(1) > Global.second_54 ){
+                    Log.i(TAG, "go to goal");
+                    List<Integer> route = dijkstra(Global.Nowplace, 6);
+                    Log.i(TAG, "Route" + route.toString());
+                    for (int n = 2; n < route.size(); n++) { //n = 0.1はスタート地点なのでスキップ
+                        //Log.i(TAG, "Let's go to node " +route.get(n).toString());
+                        Waypoint2Number(route.get(n));
+                    }
+                }
+
+                Global.Finflag = true;
+                return true;
+            }
+        }else{
+            if(api.getTimeRemaining().get(1)<Global.RemainingTime){
+                Global.Finflag = true;
+                return true;
+            }
+        }
+        return false;
+    }
+    private int TargetPoint(int Target){
+        switch (Target){
+            case 1:
+                return 30;
+            case 2:
+                return 20;
+            case 3:
+                return 40;
+            case 4:
+                return 20;
+            case 5:
+                return 30;
+            case 6:
+                return 30;
+        }
+        return 0;
+    }
 }
+
